@@ -1,6 +1,6 @@
 {
   "version": "0.1.0",
-  "downloadUrl": "https://versel-update.vercel.app/shuati.exe",
-  "apkDownloadUrl": "https://versel-update.vercel.app/app-debug.apk",
+  "downloadUrl": "https://gitee.com/zhong-yongfu/shuati/raw/master/versel-update/shuati.exe",
+  "apkDownloadUrl": "https://gitee.com/zhong-yongfu/shuati/raw/master/versel-update/app-debug.apk",
   "notes": "新增 AI 配置 · 错题本折叠 · 多题库按题型分类\n修复: 导航 Key 警告 · 导入导出图标互换 · AI 按钮颜色"
 }

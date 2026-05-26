@@ -10,40 +10,35 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-echo [OK] shuati.exe updated
+echo [OK] shuati.exe
 
 echo Copying setup ...
 for %%f in ("src-tauri\target\release\bundle\nsis\shuati_*.exe") do (
     copy /Y "%%f" "versel-update\" >nul
-    if not errorlevel 1 (
-        echo [OK] %%~nxf
-    ) else (
-        echo ERROR: setup copy failed
-        pause
-        exit /b 1
-    )
+    echo [OK] %%~nxf
 )
 
 echo Copying APK ...
 if exist "android\app\build\outputs\apk\debug\app-debug.apk" (
     copy /Y "android\app\build\outputs\apk\debug\app-debug.apk" "versel-update\" >nul
-    echo [OK] APK updated
+    echo [OK] app-debug.apk
 ) else (
-    echo [SKIP] APK not found (desktop deploy continues)
+    echo [SKIP] APK not found
 )
 
-cd /d "%~dp0versel-update"
-echo Deploying to Vercel ...
-vercel deploy --prod
+echo Committing and pushing to Gitee ...
+git add versel-update/
+git commit -m "update: build artifacts"
+git push origin master
 
 if errorlevel 1 (
-    echo ERROR: Vercel deploy failed
+    echo ERROR: git push failed
     pause
     exit /b 1
 )
 
 echo.
 echo ====== DONE ======
-echo https://versel-update.vercel.app/version.json
+echo https://gitee.com/zhong-yongfu/shuati/raw/master/versel-update/version.json
 echo.
 pause
