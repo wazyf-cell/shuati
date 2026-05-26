@@ -66,7 +66,7 @@ interface PracticeState {
   isSubmitted: boolean;
   questionStartTime: number;
 
-  startPractice: (questions: Question[]) => void;
+  startPractice: (questions: Question[], initialMarked?: string[]) => void;
   setAnswer: (questionId: string, answer: AnswerValue) => void;
   markQuestion: (questionId: string) => void;
   nextQuestion: () => void;
@@ -90,13 +90,13 @@ export const usePracticeStore = create<PracticeState>((set, get) => ({
   isSubmitted: false,
   questionStartTime: 0,
 
-  startPractice: (questions) => {
+  startPractice: (questions, initialMarked = []) => {
     set({
       currentIndex: 0,
       questions,
       answers: {},
       results: {},
-      marked: [],
+      marked: initialMarked,
       startTime: Date.now(),
       questionStartTime: Date.now(),
       isSubmitted: false,

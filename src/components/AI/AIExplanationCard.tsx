@@ -17,6 +17,7 @@ export function AIExplanationCard({ question, userAnswer }: AIExplanationCardPro
     const cached = getCachedExplanation(question.id);
     return cached ? 'done' : 'idle';
   });
+  const [isCached, setIsCached] = useState(() => !!getCachedExplanation(question.id));
   const [text, setText] = useState(() => getCachedExplanation(question.id) || '');
   const [error, setError] = useState('');
   const [platform, setPlatform] = useState('');
@@ -39,6 +40,7 @@ export function AIExplanationCard({ question, userAnswer }: AIExplanationCardPro
       saveCachedExplanation(question.id, result);
       setText(result);
       setStatus('done');
+      setIsCached(false);
       setTimestamp(now);
       setPlatform(PLATFORM_PRESETS[config.platform]?.name || '');
       setPromptName(getSelectedPromptName(config));
@@ -105,6 +107,9 @@ export function AIExplanationCard({ question, userAnswer }: AIExplanationCardPro
             {platform || 'AI'} 解析
             {promptName && (
               <span className="ml-1.5 text-surface-400 dark:text-surface-500">· {promptName}</span>
+            )}
+            {isCached && (
+              <span className="ml-1.5 text-surface-400 dark:text-surface-500">📋 已缓存</span>
             )}
           </span>
         </div>

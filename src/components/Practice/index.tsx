@@ -17,7 +17,7 @@ interface PracticeProps {
   bankId?: string;
   bankIds?: string[];
   presetQuestionIds?: string[];
-  mode?: 'normal' | 'wrong-review';
+  mode?: 'normal' | 'wrong-review' | 'favorite';
   onBack: () => void;
 }
 
@@ -55,7 +55,7 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
   const { startPractice, currentIndex, questions, answers, setAnswer, nextQuestion, prevQuestion, submitAnswers, isSubmitted, resetPractice, markQuestion } = usePracticeStore();
   const { addWrong } = useWrongStore();
   const { addToast } = useToastStore();
-  const { randomOptionOrder, setRandomOptionOrder, multiBankTypeOrder, setMultiBankTypeOrder, showAnswerSwitch, setShowAnswerSwitch, enableAIInPractice, setEnableAIInPractice, autoAddWrong, setAutoAddWrong } = useConfigStore();
+  const { randomOptionOrder, setRandomOptionOrder, multiBankTypeOrder, setMultiBankTypeOrder, showAnswerSwitch, setShowAnswerSwitch, enableAIInPractice, setEnableAIInPractice, autoAddWrong, setAutoAddWrong, favorites } = useConfigStore();
 
   const [phase, setPhase] = useState<Phase>('config');
   const [questionCount, setQuestionCount] = useState(10);
@@ -144,7 +144,7 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
         addToast('没有找到可练习的题目', 'error');
         return;
       }
-      startPractice(pickedQuestions);
+      startPractice(pickedQuestions, favorites);
       setPhase('practice');
       setSubmitResult(null);
       return;
@@ -250,7 +250,7 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
       return;
     }
 
-    startPractice(pickedQuestions);
+    startPractice(pickedQuestions, favorites);
     setPhase('practice');
     setSubmitResult(null);
     if (enableTimer) {
@@ -299,6 +299,8 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
     questions.forEach((q) => {
       const correct = questionResults[q.id] ?? false;
       if (correct && mode === 'wrong-review') {
+        // 错题重刷：答对则移出错题本
+        // 收藏刷题：不移除
         useWrongStore.getState().removeWrong(q.id);
       }
       if (!correct) {
@@ -554,10 +556,12 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
               <Play className="h-10 w-10 text-white" />
             </div>
             <h2 className="text-2xl font-display font-bold text-surface-900 dark:text-surface-100">
-              {mode === 'wrong-review' && presetQuestionIds ? '错题重刷' : (isMultiBank ? '多题库联合刷题' : (bank?.name || '刷题'))}
+              {mode === 'favorite' && presetQuestionIds ? '收藏刷题' : mode === 'wrong-review' && presetQuestionIds ? '错题重刷' : (isMultiBank ? '多题库联合刷题' : (bank?.name || '刷题'))}
             </h2>
             <p className="section-subtitle mt-1">
-              {mode === 'wrong-review' && presetQuestionIds ? (
+              {mode === 'favorite' && presetQuestionIds ? (
+                `已锁定 ${presetQuestionIds.length} 道收藏题目`
+              ) : mode === 'wrong-review' && presetQuestionIds ? (
                 `已锁定 ${presetQuestionIds.length} 道错题`
               ) : (() => {
                 if (isMultiBank) {
@@ -1037,6 +1041,13 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
                   />
                 </div>
 
+                {rq.analysis && (
+                  <div className="mt-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700">
+                    <span className="text-xs font-bold text-blue-500 dark:text-blue-400">💡 解析</span>
+                    <p className="text-sm text-surface-700 dark:text-surface-300 mt-1 leading-relaxed">{rq.analysis}</p>
+                  </div>
+                )}
+
                 {!isCorrect && (
                   <div className="mt-4">
                     {renderAIExplanationCard(rq.id)}
@@ -1130,10 +1141,18 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
                 )}
 
                 {showAnswerSwitch && viewedAnswerIds.has(questions[currentIndex].id) && (
-                  <div className="mt-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 text-center">
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                      👁 已查看答案，本题不计正确率
-                    </p>
+                  <div className="mt-4 space-y-3">
+                    <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 text-center">
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                        👁 已查看答案，本题不计正确率
+                      </p>
+                    </div>
+                    {questions[currentIndex].analysis && (
+                      <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700">
+                        <span className="text-xs font-bold text-blue-500 dark:text-blue-400">💡 解析</span>
+                        <p className="text-sm text-surface-700 dark:text-surface-300 mt-1 leading-relaxed">{questions[currentIndex].analysis}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
