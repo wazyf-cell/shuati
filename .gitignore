@@ -1,0 +1,10 @@
+node_modules/
+dist/
+target/
+.vercel/
+*.exe
+*.apk
+*.msi
+.env
+.DS_Store
+*.local

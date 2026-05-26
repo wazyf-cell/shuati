@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="only light" />
+    <title>刷题助手 — 快乐刷题每一天</title>
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fc;
+        transition: opacity 0.35s ease;
+      }
+      #splash.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #splash-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #7c4dff, #6c3eff);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 16px rgba(124, 77, 255, 0.3);
+        animation: splash-bounce 0.8s ease-in-out infinite alternate;
+      }
+      #splash-icon svg {
+        width: 32px;
+        height: 32px;
+        color: white;
+      }
+      #splash-title {
+        margin-top: 20px;
+        font-size: 24px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #7c4dff, #6c3eff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+      #splash-spinner {
+        margin-top: 28px;
+        width: 32px;
+        height: 32px;
+        border: 3px solid #e0e0e0;
+        border-top-color: #7c4dff;
+        border-radius: 50%;
+        animation: splash-spin 0.8s linear infinite;
+      }
+      @keyframes splash-bounce {
+        from { transform: translateY(0); }
+        to   { transform: translateY(-6px); }
+      }
+      @keyframes splash-spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="splash">
+      <div id="splash-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3a9 9 0 0 0-9 9c0 1.66.45 3.22 1.24 4.56L3 21l4.44-1.24A9 9 0 1 0 12 3z"/>
+          <path d="M8 11h8"/>
+          <path d="M8 15h5"/>
+        </svg>
+      </div>
+      <div id="splash-title">刷题助手</div>
+      <div id="splash-spinner"></div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
