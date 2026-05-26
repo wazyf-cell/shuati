@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Moon, Sun, RefreshCw, Download, X, ArrowLeft, Settings as SettingsIcon, Github } from 'lucide-react';
-import { useConfigStore, useToastStore } from '../../store';
+import { useConfigStore } from '../../store';
 
 const APP_VERSION = '1.0.1';
 const UPDATE_URL = 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/version.json';
@@ -23,7 +23,7 @@ const CHANGELOG: ChangelogEntry[] = [
     items: [
       '新增程序内自动更新：点击自动更新后后台下载，自动替换 exe 并重启',
       '新增 Windows 无感更新：下载 → 替换 exe → 自动重启，无需手动操作',
-      '新增 Gitee 更新源：国内直连，不需要梯子',
+      '新增 GitHub 更新源：国内直连，不需要梯子',
       '优化设置页面：深色模式移入设置，新增版本检测和手动下载链接',
       '修复 AI 平台配置缺少 website 字段导致编译错误',
       '修复更新 URL 指向 Vercel 导致国内网络错误',
@@ -73,95 +73,117 @@ interface SettingsProps {
 
 export function Settings({ onBack }: SettingsProps) {
   const { darkMode, toggleDarkMode } = useConfigStore();
-  const { addToast } = useToastStore();
   const [checking, setChecking] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [checked, setChecked] = useState(false);
   const [noUpdate, setNoUpdate] = useState(false);
+  const [networkError, setNetworkError] = useState(false);
+  const [errorDetail, setErrorDetail] = useState('');
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
   const [autoCheckDone, setAutoCheckDone] = useState(false);
+  const [manualCheckDone, setManualCheckDone] = useState(false);
 
-  // 启动时自动检查
+  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
+  const isAndroid = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.();
+
+  // 设置页打开后自动检查（失败则显示错误 + 手动下载链接）
   useEffect(() => {
-    if (autoCheckDone) return;
+    if (autoCheckDone || manualCheckDone) return;
     const check = async () => {
       try {
-        const res = await fetch(UPDATE_URL, { signal: AbortSignal.timeout(5000) });
-        if (!res.ok) return;
-        const data: UpdateInfo = await res.json();
-        if (data.version && data.version !== APP_VERSION) {
-          setUpdateInfo(data);
-          setShowUpdatePopup(true);
+        if (isTauri) {
+          const { invoke } = await import('@tauri-apps/api/core');
+          const text = await invoke<string>('check_update_v2');
+          const data: UpdateInfo = JSON.parse(text);
+          setChecked(true);
+          if (data.version && data.version !== APP_VERSION) {
+            setUpdateInfo(data);
+          } else {
+            setNoUpdate(true);
+          }
+        } else {
+          const res = await fetch(UPDATE_URL, { signal: AbortSignal.timeout(5000) });
+          if (!res.ok) return;
+          const data: UpdateInfo = await res.json();
+          setChecked(true);
+          if (data.version && data.version !== APP_VERSION) {
+            setUpdateInfo(data);
+          } else {
+            setNoUpdate(true);
+          }
         }
-      } catch {
-        // 静默失败 — 不打扰用户
+      } catch (e: any) {
+        setNetworkError(true);
+        setErrorDetail(e instanceof Error ? e.message : String(e || ''));
       }
       setAutoCheckDone(true);
     };
     check();
-  }, [autoCheckDone]);
+  }, [autoCheckDone, isTauri, manualCheckDone]);
 
   const handleCheckUpdate = useCallback(async () => {
     setChecking(true);
     setChecked(true);
     setNoUpdate(false);
+    setNetworkError(false);
+    setErrorDetail('');
     setUpdateInfo(null);
+    setManualCheckDone(true);
 
     try {
-      const res = await fetch(UPDATE_URL, { signal: AbortSignal.timeout(8000) });
-      if (!res.ok) {
-        addToast('无法连接更新服务器', 'error');
-        setChecking(false);
-        return;
+      let data: UpdateInfo;
+
+      if (isTauri) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const text = await invoke<string>('check_update_v2');
+        data = JSON.parse(text);
+      } else {
+        const res = await fetch(UPDATE_URL, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) {
+          setNetworkError(true);
+          setErrorDetail(`服务器返回 HTTP ${res.status}`);
+          setChecking(false);
+          return;
+        }
+        data = await res.json();
       }
-      const data: UpdateInfo = await res.json();
+
       if (data.version && data.version !== APP_VERSION) {
         setUpdateInfo(data);
         setShowUpdatePopup(true);
       } else {
         setNoUpdate(true);
       }
-    } catch {
-      setChecked(false);
-      setNoUpdate(false);
+    } catch (e: any) {
+      setNetworkError(true);
+      setErrorDetail(e instanceof Error ? e.message : String(e || ''));
     }
     setChecking(false);
-  }, [addToast]);
+  }, [isTauri]);
 
-  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
-  const isAndroid = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.();
+  const openUrl = useCallback(async (url: string) => {
+    if (isTauri) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('open_url', { url });
+    } else {
+      window.open(url, '_blank');
+    }
+  }, [isTauri]);
 
   const handleDownload = useCallback(async () => {
     if (!updateInfo) return;
-
-    // Tauri 桌面端：程序内自动更新
-    if (isTauri) {
-      try {
-        const { invoke } = await import('@tauri-apps/api/core');
-        addToast('正在下载更新...', 'info');
-        await invoke('download_update', { url: updateInfo.downloadUrl });
-        addToast('下载完成，正在更新...', 'info');
-        await invoke('apply_update');
-        // 到这步 app 会自动退出并重启
-      } catch (e: any) {
-        addToast(`更新失败: ${e}`, 'error');
-      }
-      return;
-    }
-
-    // 非 Tauri（Web / Android）：浏览器下载
     const url = isAndroid && updateInfo.apkDownloadUrl
       ? updateInfo.apkDownloadUrl
       : updateInfo.downloadUrl;
     if (url) {
-      window.open(url, '_blank');
+      openUrl(url);
     }
     setShowUpdatePopup(false);
-  }, [updateInfo, isTauri, isAndroid, addToast]);
+  }, [updateInfo, isTauri, isAndroid, openUrl]);
 
   return (
     <>
-      {/* 更新通知弹窗 */}
+      {/* 更新通知弹窗（手动检查触发） */}
       {showUpdatePopup && updateInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setShowUpdatePopup(false)}>
           <div className="card p-6 w-full max-w-lg mx-4 animate-bounce-in" onClick={(e) => e.stopPropagation()}>
@@ -247,17 +269,23 @@ export function Settings({ onBack }: SettingsProps) {
             </button>
           </div>
 
-          {!checked && !noUpdate && !updateInfo && (
-            <div className="p-3 rounded-xl bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 text-sm text-surface-500 dark:text-surface-400">
-              检测失败？手动下载更新：
-              <a
-                href={isAndroid ? 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/app-debug.apk' : 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/shuati.exe'}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-1 text-accent-500 hover:underline"
-              >
-                点击下载
-              </a>
+          {networkError && (
+            <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700">
+              <p className="text-base font-bold text-red-700 dark:text-red-300 mb-2">
+                ⚠️ 无法检测最新版本
+              </p>
+              <p className="text-sm text-red-600 dark:text-red-400">
+                手动下载更新：
+                <button
+                  onClick={() => openUrl(isAndroid ? 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/app-debug.apk' : 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/shuati.exe')}
+                  className="ml-1 text-accent-600 dark:text-accent-400 font-bold underline hover:no-underline"
+                >
+                  点击下载 shuati.exe
+                </button>
+              </p>
+              {errorDetail && (
+                <p className="text-xs text-red-500 dark:text-red-400 mt-2 break-all font-mono">{errorDetail}</p>
+              )}
             </div>
           )}
 

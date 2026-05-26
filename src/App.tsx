@@ -9,9 +9,19 @@ import { Statistics } from './components/Statistics';
 import { AIConfigPage } from './components/AI/AIConfigPage';
 import { Settings } from './components/Settings';
 import { ToastContainer } from './components/Toast/ToastContainer';
+import { Download, X } from 'lucide-react';
 import './index.css';
 
+const APP_VERSION = '1.0.1';
+
 type Page = 'dashboard' | 'bank' | 'practice' | 'wrong' | 'statistics' | 'ai' | 'settings';
+
+interface UpdateInfo {
+  version: string;
+  downloadUrl: string;
+  apkDownloadUrl?: string;
+  notes: string;
+}
 
 function App() {
   const { darkMode } = useConfigStore();
@@ -20,6 +30,70 @@ function App() {
   const [selectedBankIds, setSelectedBankIds] = useState<string[]>([]);
   const [presetQuestionIds, setPresetQuestionIds] = useState<string[] | null>(null);
   const [practiceMode, setPracticeMode] = useState<'normal' | 'wrong-review'>('normal');
+
+  // 全局自动更新检测
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [showUpdatePopup, setShowUpdatePopup] = useState(false);
+  const [popupDismissed, setPopupDismissed] = useState(false);
+  const [autoChecked, setAutoChecked] = useState(false);
+
+  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
+
+  // App 启动后自动检测更新
+  useEffect(() => {
+    if (autoChecked) return;
+    const check = async () => {
+      try {
+        let data: UpdateInfo;
+
+        if (isTauri) {
+          const { invoke } = await import('@tauri-apps/api/core');
+          const text = await invoke<string>('check_update_v2');
+          data = JSON.parse(text);
+        } else {
+          const res = await fetch(
+            'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/version.json',
+            { signal: AbortSignal.timeout(8000) }
+          );
+          if (!res.ok) return;
+          data = await res.json();
+        }
+
+        if (data.version && data.version !== APP_VERSION) {
+          setUpdateInfo(data);
+          if (!popupDismissed) {
+            setShowUpdatePopup(true);
+          }
+        }
+      } catch {
+        // 静默失败 — app 仍正常使用
+      }
+      setAutoChecked(true);
+    };
+    check();
+  }, [autoChecked, isTauri, popupDismissed]);
+
+  const handlePopupDownload = async () => {
+    if (!updateInfo) return;
+    const isAndroid = !!(window as any).Capacitor?.isNativePlatform?.();
+    const url = isAndroid && updateInfo.apkDownloadUrl
+      ? updateInfo.apkDownloadUrl
+      : updateInfo.downloadUrl;
+    if (url) {
+      if (isTauri) {
+        try {
+          const { invoke } = await import('@tauri-apps/api/core');
+          await invoke('open_url', { url });
+        } catch {
+          window.open(url, '_blank');
+        }
+      } else {
+        window.open(url, '_blank');
+      }
+    }
+    setShowUpdatePopup(false);
+    setPopupDismissed(true);
+  };
 
   // 挂载后隐藏启动屏
   useEffect(() => {
@@ -110,6 +184,41 @@ function App() {
   return (
     <div className="min-h-screen">
       <ToastContainer />
+
+      {/* 全局更新弹窗 */}
+      {showUpdatePopup && updateInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => { setShowUpdatePopup(false); setPopupDismissed(true); }}>
+          <div className="card p-6 w-full max-w-lg mx-4 animate-bounce-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-accent-500 to-accent-400 rounded-xl flex items-center justify-center shadow-sm">
+                  <Download className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-display font-bold text-surface-900 dark:text-surface-100">发现新版本</h3>
+                  <p className="text-sm text-surface-500 dark:text-surface-400">v{APP_VERSION} → v{updateInfo.version}</p>
+                </div>
+              </div>
+              <button onClick={() => { setShowUpdatePopup(false); setPopupDismissed(true); }} className="p-1 hover:bg-surface-100 dark:hover:bg-surface-700 rounded-lg transition-colors">
+                <X className="h-5 w-5 text-surface-400" />
+              </button>
+            </div>
+            <div className="p-4 bg-surface-50 dark:bg-surface-700 rounded-xl mb-4 max-h-48 overflow-y-auto">
+              <p className="text-sm text-surface-700 dark:text-surface-300 whitespace-pre-wrap leading-relaxed">
+                {updateInfo.notes}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={handlePopupDownload} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                <Download className="h-4 w-4" />
+                下载更新
+              </button>
+              <button onClick={() => { setShowUpdatePopup(false); setPopupDismissed(true); }} className="btn-ghost flex-1">暂不更新</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Header onNavigate={handleNavigate} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {renderPage()}
