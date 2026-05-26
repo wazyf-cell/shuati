@@ -16,6 +16,64 @@ interface ChangelogEntry {
   items: string[];
 }
 
+// 硬编码兜底（网页版 fetch 被 CORS 拦截时使用）
+const FALLBACK_CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '1.0.4',
+    items: [
+      '收藏题库刷题标题独立、标记预加载',
+      '刷题查看正确答案自动显示题目解析',
+      'Review 每题显示题目解析',
+      'AI 解析自动保存到题库',
+      'AI 解析缓存标识📋已缓存',
+      '题目编辑解析框自适应高度',
+      '更新日志自动同步 version.json',
+    ],
+  },
+  {
+    version: '1.0.3',
+    items: ['修复版本号不统一问题'],
+  },
+  {
+    version: '1.0.2',
+    items: [
+      '新增收藏题库（Flag 标记自动收藏，按题库分组查看，支持 AI 解析）',
+      '新增自动加入错题本开关（刷题设置中可关闭）',
+      '新增题目编辑 AI 生成解析',
+      '新增题库清空错题标记功能',
+      'AI 配置前往官网自动打开系统浏览器',
+      '收藏题库与错题本 UI 统一',
+      '优化导入弹窗居中显示',
+    ],
+  },
+  {
+    version: '1.0.1',
+    items: [
+      '新增程序内自动更新',
+      '新增 Windows 无感更新',
+      '新增 GitHub 更新源',
+      '优化设置页面',
+      '修复 AI 平台配置编译错误',
+      '修复更新 URL 指向 Vercel',
+      '修复 .gitignore 合并冲突',
+      '优化构建产物目录',
+    ],
+  },
+  {
+    version: '0.1.0',
+    items: [
+      '新增 AI 多平台配置',
+      '新增 AI 解析结果缓存',
+      '新增刷题计时模式',
+      '新增多题库联合刷题',
+      '新增错题本分组浏览与 AI 解析',
+      '新增练习统计',
+      '新增导入/导出数据',
+      '修复多项 Bug',
+    ],
+  },
+];
+
 // 从 version.json 解析更新日志
 function parseNotes(notes: string): ChangelogEntry[] {
   const entries: ChangelogEntry[] = [];
@@ -46,7 +104,7 @@ export function Settings({ onBack }: SettingsProps) {
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
   const [autoCheckDone, setAutoCheckDone] = useState(false);
   const [manualCheckDone, setManualCheckDone] = useState(false);
-  const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
+  const [changelog, setChangelog] = useState<ChangelogEntry[]>(FALLBACK_CHANGELOG);
 
   const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
   const isAndroid = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.();
@@ -66,6 +124,7 @@ export function Settings({ onBack }: SettingsProps) {
           } else {
             setNoUpdate(true);
           }
+          setChangelog(parseNotes(data.notes || ''));
         } else {
           const res = await fetch(UPDATE_URL, { signal: AbortSignal.timeout(5000) });
           if (!res.ok) return;
@@ -76,30 +135,17 @@ export function Settings({ onBack }: SettingsProps) {
           } else {
             setNoUpdate(true);
           }
+          setChangelog(parseNotes(data.notes || ''));
         }
       } catch (e: any) {
         setNetworkError(true);
         setErrorDetail(e instanceof Error ? e.message : String(e || ''));
+        setChangelog(FALLBACK_CHANGELOG);
       }
       setAutoCheckDone(true);
     };
     check();
   }, [autoCheckDone, isTauri, manualCheckDone]);
-
-  // 从 version.json 加载更新日志
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch(UPDATE_URL, { signal: AbortSignal.timeout(5000) });
-        if (!res.ok) return;
-        const data: UpdateInfo = await res.json();
-        if (data.notes) {
-          setChangelog(parseNotes(data.notes));
-        }
-      } catch { /* ignore */ }
-    };
-    load();
-  }, []);
 
   const handleCheckUpdate = useCallback(async () => {
     setChecking(true);
