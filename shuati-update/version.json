@@ -1,6 +1,0 @@
-{
-  "version": "1.0.2",
-  "downloadUrl": "https://raw.githubusercontent.com/wazyf-cell/shuati/main/gitee-update/shuati.exe",
-  "apkDownloadUrl": "https://raw.githubusercontent.com/wazyf-cell/shuati/main/gitee-update/app-debug.apk",
-  "notes": "新增 AI 配置 · 错题本折叠 · 多题库按题型分类\n修复: 导航 Key 警告 · 导入导出图标互换 · AI 按钮颜色"
-}
