@@ -3,7 +3,7 @@ import { Moon, Sun, RefreshCw, Download, X, ArrowLeft, Settings as SettingsIcon,
 import { useConfigStore, useToastStore } from '../../store';
 
 const APP_VERSION = '0.1.0';
-const UPDATE_URL = 'https://versel-update.vercel.app/version.json';
+const UPDATE_URL = 'https://gitee.com/zhong-yongfu/shuati/raw/master/versel-update/version.json';
 
 interface UpdateInfo {
   version: string;
@@ -209,7 +209,7 @@ export function Settings({ onBack }: SettingsProps) {
             <div className="p-3 rounded-xl bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 text-sm text-surface-500 dark:text-surface-400">
               检测失败？手动下载更新：
               <a
-                href={isAndroid ? 'https://versel-update.vercel.app/app-debug.apk' : 'https://versel-update.vercel.app/shuati.exe'}
+                href={isAndroid ? 'https://gitee.com/zhong-yongfu/shuati/raw/master/versel-update/app-debug.apk' : 'https://gitee.com/zhong-yongfu/shuati/raw/master/versel-update/shuati.exe'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="ml-1 text-accent-500 hover:underline"
