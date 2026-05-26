@@ -8,13 +8,14 @@ import { WrongBook } from './components/WrongBook';
 import { Statistics } from './components/Statistics';
 import { AIConfigPage } from './components/AI/AIConfigPage';
 import { Settings } from './components/Settings';
+import { FavoriteBank } from './components/FavoriteBank';
 import { ToastContainer } from './components/Toast/ToastContainer';
 import { Download, X } from 'lucide-react';
 import './index.css';
 
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 
-type Page = 'dashboard' | 'bank' | 'practice' | 'wrong' | 'statistics' | 'ai' | 'settings';
+type Page = 'dashboard' | 'bank' | 'practice' | 'wrong' | 'statistics' | 'ai' | 'settings' | 'favorite';
 
 interface UpdateInfo {
   version: string;
@@ -176,6 +177,8 @@ function App() {
         return <AIConfigPage />;
       case 'settings':
         return <Settings onBack={handleBack} />;
+      case 'favorite':
+        return <FavoriteBank onBack={handleBack} onStartPractice={handleWrongReview} />;
       default:
         return <Dashboard onSelectBank={handleSelectBank} onNavigate={handleNavigate} onMultiBankPractice={handleMultiBankPractice} />;
     }

@@ -7,6 +7,7 @@ interface WrongState {
   addWrong: (questionId: string, bankId: string, userAnswer: string[], correctAnswer: string[]) => void;
   removeWrong: (questionId: string) => void;
   clearAll: () => void;
+  clearBankWrongs: (bankId: string) => void;
   getWrongByBank: (bankId: string) => WrongQuestion[];
   isWrongQuestion: (questionId: string) => boolean;
 }
@@ -61,6 +62,14 @@ export const useWrongStore = create<WrongState>((set, get) => ({
   clearAll: () => {
     storage.setWrong([]);
     set({ wrongQuestions: [] });
+  },
+
+  clearBankWrongs: (bankId) => {
+    set((state) => {
+      const newWrong = state.wrongQuestions.filter((w) => w.bankId !== bankId);
+      storage.setWrong(newWrong);
+      return { wrongQuestions: newWrong };
+    });
   },
 
   getWrongByBank: (bankId) => {

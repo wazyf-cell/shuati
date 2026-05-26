@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, Sparkles } from 'lucide-react';
 import { useBankStore } from '../../store';
 import { useToastStore } from '../../store/toast';
 import { Question, QuestionType, QuestionOption, SubQuestion } from '../../types';
+import { loadAIConfig, generateExplanation } from '../../utils/ai';
 
 interface QuestionFormProps {
   bankId: string;
@@ -23,6 +24,7 @@ export function QuestionForm({ bankId, question, onClose }: QuestionFormProps) {
   );
   const [correctAnswer, setCorrectAnswer] = useState<string[]>(question?.correctAnswer || []);
   const [analysis, setAnalysis] = useState(question?.analysis || '');
+  const [aiGenerating, setAiGenerating] = useState(false);
   const [subType, setSubType] = useState<'single' | 'group'>(question?.subType || 'single');
   const [subQuestions, setSubQuestions] = useState<SubQuestion[]>(
     question?.subQuestions || [{ id: crypto.randomUUID(), label: '', answer: '' }]
@@ -75,6 +77,35 @@ export function QuestionForm({ bankId, question, onClose }: QuestionFormProps) {
   const handleRemoveSubQuestion = (idx: number) => {
     if (subQuestions.length <= 1) return;
     setSubQuestions(subQuestions.filter((_, i) => i !== idx));
+  };
+
+  const handleAIAnalyze = async () => {
+    if (!content.trim()) {
+      addToast('请先输入题目内容', 'warning');
+      return;
+    }
+    const config = loadAIConfig();
+    if (!config) {
+      addToast('请先在 AI 平台配置中设置 API 密钥', 'warning');
+      return;
+    }
+    setAiGenerating(true);
+    try {
+      const q: Question = {
+        id: '',
+        type,
+        content,
+        options,
+        correctAnswer,
+        analysis: '',
+      };
+      const result = await generateExplanation(q, [], config);
+      setAnalysis(result);
+      addToast('AI 解析已生成', 'success');
+    } catch (e: any) {
+      addToast(`AI 生成失败: ${e.message || e}`, 'error');
+    }
+    setAiGenerating(false);
   };
 
   const handleSubmit = () => {
@@ -342,6 +373,14 @@ export function QuestionForm({ bankId, question, onClose }: QuestionFormProps) {
               className="input min-h-[60px] resize-y"
               rows={2}
             />
+            <button
+              onClick={handleAIAnalyze}
+              disabled={aiGenerating}
+              className="mt-2 btn-outline flex items-center gap-2 text-sm text-accent-500 hover:bg-accent-50 dark:hover:bg-accent-900/20 disabled:opacity-50"
+            >
+              <Sparkles className={`h-4 w-4 ${aiGenerating ? 'animate-spin' : ''}`} />
+              {aiGenerating ? 'AI 正在思考...' : '🤖 AI 生成解析'}
+            </button>
           </div>
         </div>
 

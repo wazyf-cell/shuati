@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Search, Plus, BookOpen, Layers } from 'lucide-react';
-import { useBankStore } from '../../store';
+import { Search, Plus, BookOpen, Layers, Flag } from 'lucide-react';
+import { useBankStore, useConfigStore } from '../../store';
 import { BankCard } from './BankCard';
 import { BankSelectModal } from './BankSelectModal';
 
@@ -12,6 +12,7 @@ interface DashboardProps {
 
 export function Dashboard({ onSelectBank, onNavigate, onMultiBankPractice }: DashboardProps) {
   const { banks, addBank, deleteBank } = useBankStore();
+  const { favorites } = useConfigStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewBank, setShowNewBank] = useState(false);
   const [showMultiBankModal, setShowMultiBankModal] = useState(false);
@@ -86,6 +87,24 @@ export function Dashboard({ onSelectBank, onNavigate, onMultiBankPractice }: Das
                   </p>
                 </div>
                 <span className="text-accent-400 opacity-0 group-hover:opacity-100 transition-opacity text-2xl">→</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => onNavigate('favorite')}
+              className="card p-5 text-left hover:shadow-sm transition-all duration-200 group cursor-pointer border-2 border-transparent hover:border-amber-300 dark:hover:border-amber-600"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-500 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                  <Flag className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-display font-bold text-surface-900 dark:text-surface-100">收藏题库</h3>
+                  <p className="text-sm text-surface-500 dark:text-surface-300 mt-1">
+                    {favorites.length > 0 ? `${favorites.length} 道已收藏题目` : '标记题目自动收藏'}
+                  </p>
+                </div>
+                <span className="text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity text-2xl">→</span>
               </div>
             </button>
 

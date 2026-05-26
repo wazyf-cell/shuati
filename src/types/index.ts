@@ -93,4 +93,6 @@ export interface UserConfig {
   multiBankTypeOrder?: QuestionType[];
   showAnswerSwitch: boolean;
   enableAIInPractice: boolean;
+  autoAddWrong?: boolean;
+  favorites?: string[];
 }

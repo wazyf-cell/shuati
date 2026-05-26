@@ -322,14 +322,19 @@ export function AIConfigPage() {
             {preset.apiKeyHelp}
           </p>
           {preset.website && (
-            <a
-              href={preset.website}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={async () => {
+                if ((window as any).__TAURI_INTERNALS__) {
+                  const { invoke } = await import('@tauri-apps/api/core');
+                  await invoke('open_url', { url: preset.website });
+                } else {
+                  window.open(preset.website, '_blank');
+                }
+              }}
               className="inline-flex items-center gap-1 mt-2 text-xs text-accent-500 hover:text-accent-600 transition-colors"
             >
               前往官网 <ExternalLink className="h-3 w-3" />
-            </a>
+            </button>
           )}
         </div>
       </div>
