@@ -4,7 +4,7 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo Copying shuati.exe ...
-copy /Y "src-tauri\target\release\shuati.exe" "gitee-update\" >nul
+copy /Y "src-tauri\target\release\shuati.exe" "shuati-update\" >nul
 if errorlevel 1 (
     echo ERROR: shuati.exe not found. Run "npm run tauri:build" first.
     pause
@@ -14,20 +14,20 @@ echo [OK] shuati.exe
 
 echo Copying setup ...
 for %%f in ("src-tauri\target\release\bundle\nsis\shuati_*.exe") do (
-    copy /Y "%%f" "gitee-update\" >nul
+    copy /Y "%%f" "shuati-update\" >nul
     echo [OK] %%~nxf
 )
 
 echo Copying APK ...
 if exist "android\app\build\outputs\apk\debug\app-debug.apk" (
-    copy /Y "android\app\build\outputs\apk\debug\app-debug.apk" "gitee-update\" >nul
+    copy /Y "android\app\build\outputs\apk\debug\app-debug.apk" "shuati-update\" >nul
     echo [OK] app-debug.apk
 ) else (
     echo [SKIP] APK not found
 )
 
 echo Committing and pushing to Gitee ...
-git add gitee-update/
+git add shuati-update/
 git commit -m "update: build artifacts"
 git push origin master
 
@@ -39,6 +39,6 @@ if errorlevel 1 (
 
 echo.
 echo ====== DONE ======
-echo https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/version.json
+echo https://raw.githubusercontent.com/wazyf-cell/shuati/main/shuati-update/version.json
 echo.
 pause
