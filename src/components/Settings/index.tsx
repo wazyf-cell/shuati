@@ -16,55 +16,20 @@ interface ChangelogEntry {
   items: string[];
 }
 
-const CHANGELOG: ChangelogEntry[] = [
-  {
-    version: '1.0.1',
-    items: [
-      '新增程序内自动更新：点击自动更新后后台下载，自动替换 exe 并重启',
-      '新增 Windows 无感更新：下载 → 替换 exe → 自动重启，无需手动操作',
-      '新增 GitHub 更新源：国内直连，不需要梯子',
-      '优化设置页面：深色模式移入设置，新增版本检测和手动下载链接',
-      '修复 AI 平台配置缺少 website 字段导致编译错误',
-      '修复更新 URL 指向 Vercel 导致国内网络错误',
-      '修复 .gitignore 合并冲突导致构建产物无法推送',
-      '修复多题库按题型设置题目数量时题型顺序重复显示',
-      '优化构建产物目录：versel-update → gitee-update',
-    ],
-  },
-  {
-    version: '0.1.0',
-    items: [
-      '新增 AI 多平台配置（硅基流动/OpenAI/DeepSeek/Azure/Google/Claude/自定义）',
-      '新增 AI 配置测试连接与询问模型功能',
-      '新增 AI 解析结果缓存，同一题目不重复消耗 Token',
-      '新增刷题计时模式（正计时/倒计时）',
-      '新增刷题时及错题重刷时查看正确答案功能',
-      '新增「排除已刷题目」选项',
-      '新增随机选项顺序功能',
-      '新增多题库联合刷题',
-      '新增错题本按时间/按题库分组浏览',
-      '新增错题本题目默认折叠，点击展开',
-      '新增错题本 AI 解析',
-      '新增错题本搜索与题型筛选',
-      '新增练习统计单题库删除',
-      '新增按题型设置题目数量（单题库/多题库）',
-      '新增题型分组导航显示',
-      '新增 Review 页面「你的答案是」标注',
-      '新增一键生成全部错题 AI 解析',
-      '新增导入/导出数据（含 AI 配置）',
-      '新增重置 AI 设置按钮',
-      '新增版本自检更新功能',
-      '优化模型输入框：下拉推荐 + 手动输入',
-      '优化 Review 导航改为三列网格',
-      '优化导航栏按钮颜色统一',
-      '优化导入/导出图标互换',
-      '修复导航 Key 警告',
-      '修复 Review 题型分组显示错误',
-      '修复错题重刷模式导航三列显示',
-      '修复旧版数据兼容（自动补全缺失字段）',
-    ],
-  },
-];
+// 从 version.json 解析更新日志
+function parseNotes(notes: string): ChangelogEntry[] {
+  const entries: ChangelogEntry[] = [];
+  const blocks = notes.split(/\n\n(?=v\d)/);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    const version = lines[0].replace(/^v/, '').trim();
+    const items = lines.slice(1).map((l) => l.trim()).filter(Boolean);
+    if (version && items.length > 0) {
+      entries.push({ version, items });
+    }
+  }
+  return entries;
+}
 
 interface SettingsProps {
   onBack: () => void;
@@ -81,6 +46,7 @@ export function Settings({ onBack }: SettingsProps) {
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
   const [autoCheckDone, setAutoCheckDone] = useState(false);
   const [manualCheckDone, setManualCheckDone] = useState(false);
+  const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
 
   const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
   const isAndroid = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.();
@@ -119,6 +85,21 @@ export function Settings({ onBack }: SettingsProps) {
     };
     check();
   }, [autoCheckDone, isTauri, manualCheckDone]);
+
+  // 从 version.json 加载更新日志
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch(UPDATE_URL, { signal: AbortSignal.timeout(5000) });
+        if (!res.ok) return;
+        const data: UpdateInfo = await res.json();
+        if (data.notes) {
+          setChangelog(parseNotes(data.notes));
+        }
+      } catch { /* ignore */ }
+    };
+    load();
+  }, []);
 
   const handleCheckUpdate = useCallback(async () => {
     setChecking(true);
@@ -305,7 +286,7 @@ export function Settings({ onBack }: SettingsProps) {
           <div className="mt-4">
             <h4 className="text-sm font-bold text-surface-600 dark:text-surface-400 mb-3">更新日志</h4>
             <div className="max-h-64 overflow-y-auto pr-1">
-              {CHANGELOG.map((ver) => (
+              {changelog.map((ver) => (
                 <div key={ver.version} className="mb-4 last:mb-0">
                   <h5 className="text-sm font-bold text-accent-500 mb-2">v{ver.version}</h5>
                   <div className="space-y-1">

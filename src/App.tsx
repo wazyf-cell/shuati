@@ -29,7 +29,7 @@ function App() {
   const [selectedBankId, setSelectedBankId] = useState<string | null>(null);
   const [selectedBankIds, setSelectedBankIds] = useState<string[]>([]);
   const [presetQuestionIds, setPresetQuestionIds] = useState<string[] | null>(null);
-  const [practiceMode, setPracticeMode] = useState<'normal' | 'wrong-review'>('normal');
+  const [practiceMode, setPracticeMode] = useState<'normal' | 'wrong-review' | 'favorite'>('normal');
 
   // 全局自动更新检测
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
@@ -144,6 +144,13 @@ function App() {
     setCurrentPage('practice');
   };
 
+  const handleFavoritePractice = (questionIds: string[], bankId: string) => {
+    setSelectedBankId(bankId);
+    setPresetQuestionIds(questionIds);
+    setPracticeMode('favorite');
+    setCurrentPage('practice');
+  };
+
   const handleNavigate = (page: string) => {
     setCurrentPage(page as Page);
   };
@@ -177,7 +184,7 @@ function App() {
       case 'settings':
         return <Settings onBack={handleBack} />;
       case 'favorite':
-        return <FavoriteBank onBack={handleBack} onStartPractice={handleWrongReview} />;
+        return <FavoriteBank onBack={handleBack} onStartPractice={handleFavoritePractice} />;
       default:
         return <Dashboard onSelectBank={handleSelectBank} onNavigate={handleNavigate} onMultiBankPractice={handleMultiBankPractice} />;
     }

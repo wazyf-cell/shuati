@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Plus, Trash2, Sparkles } from 'lucide-react';
 import { useBankStore } from '../../store';
 import { useToastStore } from '../../store/toast';
@@ -25,6 +25,15 @@ export function QuestionForm({ bankId, question, onClose }: QuestionFormProps) {
   const [correctAnswer, setCorrectAnswer] = useState<string[]>(question?.correctAnswer || []);
   const [analysis, setAnalysis] = useState(question?.analysis || '');
   const [aiGenerating, setAiGenerating] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+    }
+  }, [analysis]);
   const [subType, setSubType] = useState<'single' | 'group'>(question?.subType || 'single');
   const [subQuestions, setSubQuestions] = useState<SubQuestion[]>(
     question?.subQuestions || [{ id: crypto.randomUUID(), label: '', answer: '' }]
@@ -92,7 +101,7 @@ export function QuestionForm({ bankId, question, onClose }: QuestionFormProps) {
     setAiGenerating(true);
     try {
       const q: Question = {
-        id: '',
+        id: question?.id || '',
         type,
         content,
         options,
@@ -101,7 +110,21 @@ export function QuestionForm({ bankId, question, onClose }: QuestionFormProps) {
       };
       const result = await generateExplanation(q, [], config);
       setAnalysis(result);
-      addToast('AI 解析已生成', 'success');
+      // 立即保存到题库
+      const qData: any = {
+        type,
+        content: content.trim(),
+        options: type === 'fill' || type === 'short' ? [] : options.filter((o) => o.content.trim()),
+        correctAnswer: [...correctAnswer],
+        analysis: result.trim() || '',
+        ...(type === 'short' ? { subType, subQuestions } : {}),
+      };
+      if (question?.id) {
+        updateQuestion(bankId, question.id, qData);
+      } else {
+        addQuestion(bankId, qData);
+      }
+      addToast('AI 解析已生成并保存', 'success');
     } catch (e: any) {
       addToast(`AI 生成失败: ${e.message || e}`, 'error');
     }
@@ -367,11 +390,12 @@ export function QuestionForm({ bankId, question, onClose }: QuestionFormProps) {
           <div>
             <label className="block text-sm font-bold text-surface-500 dark:text-surface-100 mb-2 font-body">题目解析（选填）</label>
             <textarea
+              ref={textareaRef}
               value={analysis}
               onChange={(e) => setAnalysis(e.target.value)}
               placeholder="输入题目解析..."
-              className="input min-h-[60px] resize-y"
-              rows={2}
+              className="input min-h-[60px] overflow-hidden"
+              rows={1}
             />
             <button
               onClick={handleAIAnalyze}
