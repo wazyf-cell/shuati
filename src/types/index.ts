@@ -15,9 +15,9 @@ export interface AIConfig {
 export interface AIPlatformDef {
   name: string;
   baseUrl: string;
-  website: string;
   models: { id: string; name: string }[];
   apiKeyHelp: string;
+  website?: string;
 }
 
 export interface QuestionOption {

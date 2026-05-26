@@ -3,7 +3,7 @@ import { Moon, Sun, RefreshCw, Download, X, ArrowLeft, Settings as SettingsIcon,
 import { useConfigStore, useToastStore } from '../../store';
 
 const APP_VERSION = '0.1.0';
-const UPDATE_URL = 'https://gitee.com/zhong-yongfu/shuati/raw/master/versel-update/version.json';
+const UPDATE_URL = 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/version.json';
 
 interface UpdateInfo {
   version: string;
@@ -104,10 +104,28 @@ export function Settings({ onBack }: SettingsProps) {
     setChecking(false);
   }, [addToast]);
 
+  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
   const isAndroid = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.();
 
-  const handleDownload = useCallback(() => {
+  const handleDownload = useCallback(async () => {
     if (!updateInfo) return;
+
+    // Tauri 桌面端：程序内自动更新
+    if (isTauri) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        addToast('正在下载更新...', 'info');
+        await invoke('download_update', { url: updateInfo.downloadUrl });
+        addToast('下载完成，正在更新...', 'info');
+        await invoke('apply_update');
+        // 到这步 app 会自动退出并重启
+      } catch (e: any) {
+        addToast(`更新失败: ${e}`, 'error');
+      }
+      return;
+    }
+
+    // 非 Tauri（Web / Android）：浏览器下载
     const url = isAndroid && updateInfo.apkDownloadUrl
       ? updateInfo.apkDownloadUrl
       : updateInfo.downloadUrl;
@@ -115,7 +133,7 @@ export function Settings({ onBack }: SettingsProps) {
       window.open(url, '_blank');
     }
     setShowUpdatePopup(false);
-  }, [updateInfo, isAndroid]);
+  }, [updateInfo, isTauri, isAndroid, addToast]);
 
   return (
     <>
@@ -209,7 +227,7 @@ export function Settings({ onBack }: SettingsProps) {
             <div className="p-3 rounded-xl bg-surface-50 dark:bg-surface-700 border border-surface-200 dark:border-surface-600 text-sm text-surface-500 dark:text-surface-400">
               检测失败？手动下载更新：
               <a
-                href={isAndroid ? 'https://gitee.com/zhong-yongfu/shuati/raw/master/versel-update/app-debug.apk' : 'https://gitee.com/zhong-yongfu/shuati/raw/master/versel-update/shuati.exe'}
+                href={isAndroid ? 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/app-debug.apk' : 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/shuati.exe'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="ml-1 text-accent-500 hover:underline"
