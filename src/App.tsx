@@ -38,12 +38,14 @@ function App() {
   const [autoChecked, setAutoChecked] = useState(false);
 
   const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
+  const isAndroid = typeof window !== 'undefined' && !!(window as any).Capacitor?.isNativePlatform?.();
 
-  // App 启动后自动检测更新
+  // App 启动后自动检测更新（仅桌面端，Android 跳过）
   useEffect(() => {
     if (autoChecked) return;
     const check = async () => {
       try {
+        const UPDATE_URL = 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/version.json';
         let data: UpdateInfo;
 
         if (isTauri) {
@@ -51,10 +53,7 @@ function App() {
           const text = await invoke<string>('check_update_v2');
           data = JSON.parse(text);
         } else {
-          const res = await fetch(
-            'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/version.json',
-            { signal: AbortSignal.timeout(8000) }
-          );
+          const res = await fetch(UPDATE_URL, { signal: AbortSignal.timeout(8000) });
           if (!res.ok) return;
           data = await res.json();
         }
@@ -75,7 +74,6 @@ function App() {
 
   const handlePopupDownload = async () => {
     if (!updateInfo) return;
-    const isAndroid = !!(window as any).Capacitor?.isNativePlatform?.();
     const url = isAndroid && updateInfo.apkDownloadUrl
       ? updateInfo.apkDownloadUrl
       : updateInfo.downloadUrl;
@@ -94,6 +92,8 @@ function App() {
     setShowUpdatePopup(false);
     setPopupDismissed(true);
   };
+
+  const downloadLabel = isAndroid ? '下载 APK' : '下载更新';
 
   // 挂载后隐藏启动屏
   useEffect(() => {
@@ -211,7 +211,7 @@ function App() {
             <div className="flex gap-3">
               <button onClick={handlePopupDownload} className="btn-primary flex-1 flex items-center justify-center gap-2">
                 <Download className="h-4 w-4" />
-                下载更新
+                {downloadLabel}
               </button>
               <button onClick={() => { setShowUpdatePopup(false); setPopupDismissed(true); }} className="btn-ghost flex-1">暂不更新</button>
             </div>
