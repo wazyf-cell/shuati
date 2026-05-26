@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Question } from '../types';
+import { useConfigStore } from './config';
 
 // ---------------------------------------------------------------------------
 // Answer types – fill/short-group use different shapes
@@ -109,11 +110,21 @@ export const usePracticeStore = create<PracticeState>((set, get) => ({
   },
 
   markQuestion: (questionId) => {
-    set((state) => ({
-      marked: state.marked.includes(questionId)
-        ? state.marked.filter((id) => id !== questionId)
-        : [...state.marked, questionId],
-    }));
+    set((state) => {
+      const wasMarked = state.marked.includes(questionId);
+      // 同步到持久化收藏
+      const configStore = useConfigStore.getState();
+      if (wasMarked) {
+        configStore.removeFavorite(questionId);
+      } else {
+        configStore.addFavorite(questionId);
+      }
+      return {
+        marked: wasMarked
+          ? state.marked.filter((id) => id !== questionId)
+          : [...state.marked, questionId],
+      };
+    });
   },
 
   nextQuestion: () => {

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { ArrowLeft, Search, Plus, Play, Upload } from 'lucide-react';
+import { ArrowLeft, Search, Plus, Play, Upload, Eraser } from 'lucide-react';
 import { useBankStore, useWrongStore } from '../../store';
 import { Question, QuestionType } from '../../types';
 import { QuestionForm } from './QuestionForm';
@@ -13,7 +13,7 @@ interface BankDetailProps {
 
 export function BankDetail({ bankId, onBack, onStartPractice }: BankDetailProps) {
   const { banks, deleteQuestion } = useBankStore();
-  const { wrongQuestions } = useWrongStore();
+  const { clearBankWrongs, wrongQuestions } = useWrongStore();
   const [showForm, setShowForm] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -130,6 +130,13 @@ export function BankDetail({ bankId, onBack, onStartPractice }: BankDetailProps)
           <button onClick={() => setShowImportModal(true)} className="btn-outline flex items-center gap-2 text-sm">
             <Upload className="h-4 w-4" />
             导入题目
+          </button>
+          <button
+            onClick={() => { if (confirm('确定清空该题库所有错题标记？')) { clearBankWrongs(bankId); } }}
+            className="btn-outline flex items-center gap-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+          >
+            <Eraser className="h-4 w-4" />
+            清空标记
           </button>
           <button onClick={() => onStartPractice(bankId)} className="btn-secondary flex items-center gap-2 text-sm">
             <Play className="h-4 w-4" />

@@ -55,7 +55,7 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
   const { startPractice, currentIndex, questions, answers, setAnswer, nextQuestion, prevQuestion, submitAnswers, isSubmitted, resetPractice, markQuestion } = usePracticeStore();
   const { addWrong } = useWrongStore();
   const { addToast } = useToastStore();
-  const { randomOptionOrder, setRandomOptionOrder, multiBankTypeOrder, setMultiBankTypeOrder, showAnswerSwitch, setShowAnswerSwitch, enableAIInPractice, setEnableAIInPractice } = useConfigStore();
+  const { randomOptionOrder, setRandomOptionOrder, multiBankTypeOrder, setMultiBankTypeOrder, showAnswerSwitch, setShowAnswerSwitch, enableAIInPractice, setEnableAIInPractice, autoAddWrong, setAutoAddWrong } = useConfigStore();
 
   const [phase, setPhase] = useState<Phase>('config');
   const [questionCount, setQuestionCount] = useState(10);
@@ -302,11 +302,14 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
         useWrongStore.getState().removeWrong(q.id);
       }
       if (!correct) {
-        const userAns: AnswerValue | undefined = answers[q.id];
-        const wrongAns: string[] = Array.isArray(userAns) ? userAns : [];
-        const questionBank = banks.find((b) => b.questions.some((bq) => bq.id === q.id));
-        if (questionBank) {
-          addWrong(q.id, questionBank.id, wrongAns, q.correctAnswer);
+        // 自动加入错题本（可配置）
+        if (autoAddWrong) {
+          const userAns: AnswerValue | undefined = answers[q.id];
+          const wrongAns: string[] = Array.isArray(userAns) ? userAns : [];
+          const questionBank = banks.find((b) => b.questions.some((bq) => bq.id === q.id));
+          if (questionBank) {
+            addWrong(q.id, questionBank.id, wrongAns, q.correctAnswer);
+          }
         }
       }
     });
@@ -744,6 +747,19 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
                 className={`relative w-12 h-6 rounded-full transition-colors ${randomOptionOrder ? 'bg-accent-500' : 'bg-surface-400 dark:bg-surface-600'}`}
               >
                 <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow ${randomOptionOrder ? 'translate-x-7' : 'translate-x-1'}`} />
+              </div>
+            </label>
+
+            <label className="flex items-center justify-between p-4 bg-surface-50 dark:bg-surface-700 rounded-xl cursor-pointer">
+              <div>
+                <span className="text-sm font-bold text-surface-900 dark:text-surface-100 font-body">自动加入错题本</span>
+                <p className="text-xs text-surface-400 dark:text-surface-500 mt-0.5">做错时自动记录</p>
+              </div>
+              <div
+                onClick={() => setAutoAddWrong(!autoAddWrong)}
+                className={`relative w-12 h-6 rounded-full transition-colors ${autoAddWrong ? 'bg-accent-500' : 'bg-surface-400 dark:bg-surface-600'}`}
+              >
+                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform shadow ${autoAddWrong ? 'translate-x-7' : 'translate-x-1'}`} />
               </div>
             </label>
 
