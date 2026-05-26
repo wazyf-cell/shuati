@@ -303,7 +303,7 @@ export function Settings({ onBack }: SettingsProps) {
               <p className="text-sm text-red-600 dark:text-red-400">
                 手动下载更新：
                 <button
-                  onClick={() => openUrl(isAndroid ? 'https://raw.githubusercontent.com/wazyf-cell/shuati/main/shuati-update/app-debug.apk' : 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/shuati.exe')}
+                  onClick={() => openUrl(isAndroid ? 'https://raw.githubusercontent.com/wazyf-cell/shuati/main/gitee-update/app-debug.apk' : 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/shuati.exe')}
                   className="ml-1 text-accent-600 dark:text-accent-400 font-bold underline hover:no-underline"
                 >
                   点击下载 {isAndroid ? 'app-debug.apk' : 'shuati.exe'}
