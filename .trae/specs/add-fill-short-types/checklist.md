@@ -1,0 +1,38 @@
+# Checklist
+
+- [x] types/index.ts 中 QuestionType 包含 'fill' | 'short'
+- [x] types/index.ts 中 Question 接口含 subType 和 subQuestions 可选字段
+- [x] 所有 Record<QuestionType, ...> 编译无缺 key 错误
+- [x] QuestionForm 题型按钮行有"填空题"和"简答题"按钮
+- [x] 选填空题时选项区域隐藏，答案 input 有逗号分隔提示
+- [x] 选简答题时显示子类型切换（单题单答/大题多小题）
+- [x] 简答大题模式支持动态添加/删除小题，最少 1 个
+- [x] fill 提交跳过 options 校验，short 按子类型校验
+- [x] 编辑模式回填 fill/short 数据正确
+- [x] OptionPanel fill 类型渲染输入框而非选项按钮
+- [x] fill 输入框数量 = correctAnswer.length，占位符"填空第 N 空"
+- [x] fill 提交后逐空比对，正确绿框错误红框+答案
+- [x] short-single 渲染 textarea，提交后模糊匹配判分
+- [x] short-group 渲染 subQuestions 列表，每个小题独立判分
+- [x] submitAnswers fill 类型逐元素 trim() 比对
+- [x] submitAnswers short-single 去空格标点忽略大小写匹配
+- [x] submitAnswers short-group 逐小题匹配
+- [x] single/multiple/judge 判分逻辑不变
+- [x] QuestionView 的 typeLabels/typeColors 含 fill/short
+- [x] Practice index 的 typeLabels/badges/typeOrder/typeCounts 含 fill/short
+- [x] ImportModal 的 typeLabels/badges 含 fill/short
+- [x] QuestionTable 的 typeLabels/badges/typeSortOrder 含 fill/short (fill=3,short=4)
+- [x] txtParser 支持 [填空] 标签解析，无答案行报错
+- [x] txtParser 支持 [简答] 标签解析 → subType='single'
+- [x] txtParser 支持 [简答-大题] 标签解析 → subType='group'，无小题报错
+- [x] getTxtTemplate() 含填空和简答题示例
+- [x] excelParser TYPE_MAP 含填空/简答键值
+- [x] excelParser fill/short 跳过 options 校验，short 校验答案非空
+- [x] excelParser fill 答案按逗号拆分，short 答案入单元素数组
+- [x] 导出 Excel 时填空题写"填空"答案逗号拼接
+- [x] 导出 Excel 时简答题写"简答"，大题写"简答-大题"
+- [x] 错题本题型标签显示"填空"/"简答"
+- [x] 错题本 fill 用户答案逗号拼接+正确答案对比
+- [x] 错题本 short 用户答案显示前 30 字
+- [x] npx tsc --noEmit 通过
+- [x] npx vite build 通过
