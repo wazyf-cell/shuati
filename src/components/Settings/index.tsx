@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Moon, Sun, RefreshCw, Download, X, ArrowLeft, Settings as SettingsIcon, Github } from 'lucide-react';
 import { useConfigStore } from '../../store';
-
-const APP_VERSION = '1.0.1';
+import { APP_VERSION } from '../../version';
 const UPDATE_URL = 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/version.json';
 
 interface UpdateInfo {

@@ -1,6 +1,6 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "downloadUrl": "https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/shuati.exe",
   "apkDownloadUrl": "https://raw.githubusercontent.com/wazyf-cell/shuati/main/shuati-update/app-debug.apk",
-  "notes": "新增收藏题库（Flag 标记自动收藏，按题库分组查看，支持 AI 解析）\n新增自动加入错题本开关（刷题设置中可关闭）\n新增题目编辑 AI 生成解析\n新增题库清空错题标记功能\nAI 配置前往官网自动打开系统浏览器\n收藏题库与错题本 UI 统一\n优化导入弹窗居中显示"
+  "notes": "v1.0.3\n修复版本号不统一问题\n\nv1.0.2\n新增收藏题库（Flag 标记自动收藏，按题库分组查看，支持 AI 解析）\n新增自动加入错题本开关（刷题设置中可关闭）\n新增题目编辑 AI 生成解析\n新增题库清空错题标记功能\nAI 配置前往官网自动打开系统浏览器\n收藏题库与错题本 UI 统一\n优化导入弹窗居中显示\n\nv1.0.1\n新增 AI 配置 · 错题本折叠 · 多题库按题型分类\n修复: 导航 Key 警告 · 导入导出图标互换 · AI 按钮颜色"
 }

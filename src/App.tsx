@@ -12,8 +12,7 @@ import { FavoriteBank } from './components/FavoriteBank';
 import { ToastContainer } from './components/Toast/ToastContainer';
 import { Download, X } from 'lucide-react';
 import './index.css';
-
-const APP_VERSION = '1.0.2';
+import { APP_VERSION } from './version';
 
 type Page = 'dashboard' | 'bank' | 'practice' | 'wrong' | 'statistics' | 'ai' | 'settings' | 'favorite';
 
