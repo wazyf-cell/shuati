@@ -65,7 +65,9 @@ interface PracticeState {
   startTime: number;
   isSubmitted: boolean;
   questionStartTime: number;
+  phase: 'config' | 'practice' | 'review';
 
+  setPhase: (phase: 'config' | 'practice' | 'review') => void;
   startPractice: (questions: Question[], initialMarked?: string[]) => void;
   setAnswer: (questionId: string, answer: AnswerValue) => void;
   markQuestion: (questionId: string) => void;
@@ -90,6 +92,10 @@ export const usePracticeStore = create<PracticeState>((set, get) => ({
   isSubmitted: false,
   questionStartTime: 0,
 
+  phase: 'config',
+
+  setPhase: (phase) => set({ phase }),
+
   startPractice: (questions, initialMarked = []) => {
     set({
       currentIndex: 0,
@@ -100,6 +106,7 @@ export const usePracticeStore = create<PracticeState>((set, get) => ({
       startTime: Date.now(),
       questionStartTime: Date.now(),
       isSubmitted: false,
+      phase: 'practice',
     });
   },
 
@@ -203,6 +210,7 @@ export const usePracticeStore = create<PracticeState>((set, get) => ({
       startTime: 0,
       isSubmitted: false,
       questionStartTime: 0,
+      phase: 'config',
     });
   },
 

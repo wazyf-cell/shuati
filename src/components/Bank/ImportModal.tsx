@@ -149,8 +149,8 @@ export function ImportModal({ bankId, onClose, onImported }: ImportModalProps) {
   const hasResult = parseStatus === 'done' || parseStatus === 'error';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-950/50 backdrop-blur-sm">
-      <div className="card animate-bounce-in max-w-xl w-full mx-4 max-h-[90vh] flex flex-col overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-950/50 backdrop-blur-sm p-4">
+      <div className="card animate-bounce-in max-w-xl w-full max-h-[85vh] flex flex-col overflow-y-auto">
         {/* ---- 头部 ---- */}
         <div className="flex items-center justify-between p-5 pb-3">
           <h2 className="font-display text-xl font-bold text-surface-800 dark:text-surface-200">

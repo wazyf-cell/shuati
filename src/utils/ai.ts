@@ -264,6 +264,14 @@ export async function generateExplanation(
     }
   }
 
+  // 简答大题：附加小题信息
+  if (question.type === 'short' && question.subType === 'group' && question.subQuestions?.length) {
+    prompt += `\n小题：\n`;
+    for (const sq of question.subQuestions) {
+      prompt += `${sq.label}\n参考答案：${sq.answer}\n`;
+    }
+  }
+
   prompt += `正确答案：${question.correctAnswer.join(', ')}\n`;
   prompt += `我的答案：${userAnswer.join(', ') || '未作答'}\n`;
 
