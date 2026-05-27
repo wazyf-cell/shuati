@@ -5,6 +5,83 @@ import { useToastStore } from '../../store/toast';
 import { Question, QuestionType, QuestionOption, SubQuestion } from '../../types';
 import { loadAIConfig, generateExplanation } from '../../utils/ai';
 
+// 可拖拽分割线的小题行
+function SubQuestionRow({
+  sq,
+  idx,
+  onUpdate,
+  onRemove,
+}: {
+  sq: SubQuestion;
+  idx: number;
+  onUpdate: (i: number, label: string, answer: string) => void;
+  onRemove: (i: number) => void;
+}) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const dragging = useRef(false);
+
+  const onMouseDown = () => {
+    dragging.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragging.current || !rowRef.current) return;
+      const rect = rowRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const totalW = rect.width - 50; // minus delete button
+      const labelW = Math.max(60, Math.min(totalW - 60, x));
+      const labelEl = rowRef.current.querySelector('.sub-label') as HTMLElement;
+      const ansEl = rowRef.current.querySelector('.sub-answer') as HTMLElement;
+      if (labelEl) labelEl.style.width = labelW + 'px';
+      if (ansEl) ansEl.style.flex = '0 0 auto';
+      if (ansEl) ansEl.style.width = (totalW - labelW - 2) + 'px';
+    };
+
+    const onMouseUp = () => {
+      dragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  return (
+    <div
+      ref={rowRef}
+      className="flex items-center gap-0 border border-surface-200 dark:border-surface-600 rounded-lg overflow-hidden"
+    >
+      <input
+        value={sq.label}
+        onChange={(e) => onUpdate(idx, e.target.value, sq.answer)}
+        placeholder="小题编号"
+        className="sub-label input border-0 rounded-none flex-shrink-0"
+        style={{ width: '30%', minWidth: '60px' }}
+      />
+      <div
+        onMouseDown={onMouseDown}
+        className="w-1.5 h-8 bg-surface-300 dark:bg-surface-500 cursor-col-resize hover:bg-accent-500 dark:hover:bg-accent-500 active:bg-accent-600 transition-colors flex-shrink-0"
+      />
+      <input
+        value={sq.answer}
+        onChange={(e) => onUpdate(idx, sq.label, e.target.value)}
+        placeholder="参考答案"
+        className="sub-answer input border-0 rounded-none flex-1"
+      />
+      <button
+        onClick={() => onRemove(idx)}
+        className="p-2 text-surface-300 dark:text-surface-400 hover:text-accent-500 rounded-r-lg transition-colors flex-shrink-0 border-l border-surface-200 dark:border-surface-600"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 interface QuestionFormProps {
   bankId: string;
   question: Question | null;
@@ -350,36 +427,19 @@ export function QuestionForm({ bankId, question, onClose }: QuestionFormProps) {
                       添加小题
                     </button>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {subQuestions.map((sq, idx) => (
-                      <div key={sq.id} className="flex items-center gap-2">
-                        <input
-                          value={sq.label}
-                          onChange={(e) => {
-                            const updated = [...subQuestions];
-                            updated[idx] = { ...sq, label: e.target.value };
-                            setSubQuestions(updated);
-                          }}
-                          placeholder="小题编号，如 小题1"
-                          className="input w-28 flex-shrink-0"
-                        />
-                        <input
-                          value={sq.answer}
-                          onChange={(e) => {
-                            const updated = [...subQuestions];
-                            updated[idx] = { ...sq, answer: e.target.value };
-                            setSubQuestions(updated);
-                          }}
-                          placeholder="参考答案"
-                          className="input flex-1"
-                        />
-                        <button
-                          onClick={() => handleRemoveSubQuestion(idx)}
-                          className="p-2 text-surface-300 dark:text-surface-400 hover:text-accent-500 rounded-xl transition-colors flex-shrink-0"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+                      <SubQuestionRow
+                        key={sq.id}
+                        sq={sq}
+                        idx={idx}
+                        onUpdate={(i, label, answer) => {
+                          const updated = [...subQuestions];
+                          updated[i] = { ...updated[i], label, answer };
+                          setSubQuestions(updated);
+                        }}
+                        onRemove={(i) => handleRemoveSubQuestion(i)}
+                      />
                     ))}
                   </div>
                 </div>

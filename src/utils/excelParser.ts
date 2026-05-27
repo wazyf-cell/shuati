@@ -255,12 +255,48 @@ function buildQuestion(data: Record<string, string>): ParsedQuestion {
   const correctAnswer = parseCorrectAnswer(data['correctAnswer'] ?? '', type);
   validateParsedAnswer(data, correctAnswer, type, errors);
 
+  // 简答题 subType / subQuestions
+  let shortSubType: 'single' | 'group' | undefined;
+  let subQuestions:
+    | { id: string; label: string; answer: string }[]
+    | undefined;
+  if (type === 'short') {
+    const rawSubType = (data['subType'] || data['subtype'] || '').trim();
+    if (rawSubType === 'group' || rawSubType === '大题' || rawSubType === '简答-大题') {
+      shortSubType = 'group';
+      // 从 correctAnswer 列解析小题
+      const parts = correctAnswer.join(',');
+      const subParts = parts.split('|').filter(Boolean);
+      if (subParts.length > 0) {
+        subQuestions = subParts.map((p, i) => {
+          const colonIdx = p.indexOf(':');
+          if (colonIdx > 0) {
+            return {
+              id: crypto.randomUUID(),
+              label: p.slice(0, colonIdx).trim(),
+              answer: p.slice(colonIdx + 1).trim(),
+            };
+          }
+          return {
+            id: crypto.randomUUID(),
+            label: `小题${i + 1}`,
+            answer: p.trim(),
+          };
+        });
+      }
+    } else {
+      shortSubType = 'single';
+    }
+  }
+
   const question: ParsedQuestion = {
     type,
     content: data['content'] ?? '',
     options,
-    correctAnswer,
+    correctAnswer: shortSubType === 'group' ? [] : correctAnswer,
     analysis: data['analysis'] ?? '',
+    ...(shortSubType ? { subType: shortSubType } : {}),
+    ...(subQuestions ? { subQuestions } : {}),
   };
 
   if (errors.length > 0) {

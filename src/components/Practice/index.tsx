@@ -21,8 +21,6 @@ interface PracticeProps {
   onBack: () => void;
 }
 
-type Phase = 'config' | 'practice' | 'review';
-
 type AIStatus = 'idle' | 'loading' | 'done' | 'error';
 
 interface AIState {
@@ -52,12 +50,11 @@ const typeBadges: Record<QuestionType, string> = {
 
 export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: PracticeProps) {
   const { banks } = useBankStore();
-  const { startPractice, currentIndex, questions, answers, setAnswer, nextQuestion, prevQuestion, submitAnswers, isSubmitted, resetPractice, markQuestion } = usePracticeStore();
+  const { startPractice, currentIndex, questions, answers, setAnswer, nextQuestion, prevQuestion, submitAnswers, isSubmitted, resetPractice, markQuestion, phase, setPhase } = usePracticeStore();
   const { addWrong } = useWrongStore();
   const { addToast } = useToastStore();
   const { randomOptionOrder, setRandomOptionOrder, multiBankTypeOrder, setMultiBankTypeOrder, showAnswerSwitch, setShowAnswerSwitch, enableAIInPractice, setEnableAIInPractice, autoAddWrong, setAutoAddWrong, favorites } = useConfigStore();
 
-  const [phase, setPhase] = useState<Phase>('config');
   const [questionCount, setQuestionCount] = useState(10);
   const [isRandom, setIsRandom] = useState(true);
   const [enableTimer, setEnableTimer] = useState(false);

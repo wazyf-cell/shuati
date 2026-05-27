@@ -31,6 +31,29 @@ function App() {
   const [presetQuestionIds, setPresetQuestionIds] = useState<string[] | null>(null);
   const [practiceMode, setPracticeMode] = useState<'normal' | 'wrong-review' | 'favorite'>('normal');
 
+  // 导航历史栈（最多 5 条）
+  const MAX_HISTORY = 5;
+  const [navHistory, setNavHistory] = useState<Page[]>(['dashboard']);
+
+  const navigateWithHistory = (page: Page) => {
+    setNavHistory((prev) => {
+      if (prev[prev.length - 1] === page) return prev; // 同一页不重复
+      const next = [...prev, page];
+      if (next.length > MAX_HISTORY) next.shift();
+      return next;
+    });
+    setCurrentPage(page);
+  };
+
+  const handleNavBack = () => {
+    setNavHistory((prev) => {
+      if (prev.length <= 1) return prev;
+      const next = prev.slice(0, -1);
+      setCurrentPage(next[next.length - 1]);
+      return next;
+    });
+  };
+
   // 全局自动更新检测
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
@@ -116,18 +139,18 @@ function App() {
 
   const handleSelectBank = (bankId: string) => {
     setSelectedBankId(bankId);
-    setCurrentPage('bank');
+    navigateWithHistory('bank');
   };
 
   const handleStartPractice = (bankId: string) => {
     setSelectedBankId(bankId);
     setSelectedBankIds([bankId]);
-    setCurrentPage('practice');
+    navigateWithHistory('practice');
   };
 
   const handleMultiBankPractice = (bankIds: string[]) => {
     setSelectedBankIds(bankIds);
-    setCurrentPage('practice');
+    navigateWithHistory('practice');
   };
 
   const handleBack = () => {
@@ -135,24 +158,25 @@ function App() {
     setSelectedBankId(null);
     setPresetQuestionIds(null);
     setPracticeMode('normal');
+    setNavHistory(['dashboard']);
   };
 
   const handleWrongReview = (questionIds: string[], bankId: string) => {
     setSelectedBankId(bankId);
     setPresetQuestionIds(questionIds);
     setPracticeMode('wrong-review');
-    setCurrentPage('practice');
+    navigateWithHistory('practice');
   };
 
   const handleFavoritePractice = (questionIds: string[], bankId: string) => {
     setSelectedBankId(bankId);
     setPresetQuestionIds(questionIds);
     setPracticeMode('favorite');
-    setCurrentPage('practice');
+    navigateWithHistory('practice');
   };
 
   const handleNavigate = (page: string) => {
-    setCurrentPage(page as Page);
+    navigateWithHistory(page as Page);
   };
 
   const renderPage = () => {
@@ -228,7 +252,7 @@ function App() {
         </div>
       )}
 
-      <Header onNavigate={handleNavigate} />
+      <Header onNavigate={handleNavigate} canBack={navHistory.length > 1} onNavBack={handleNavBack} />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {renderPage()}
       </main>

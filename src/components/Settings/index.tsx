@@ -19,6 +19,19 @@ interface ChangelogEntry {
 // 硬编码兜底（网页版 fetch 被 CORS 拦截时使用）
 const FALLBACK_CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.5',
+    items: [
+      '导航栏新增返回按钮（支持历史回溯）',
+      '刷题状态持久化（切换页面不丢失）',
+      '简答大题编辑左右分栏+可拖拽分割线',
+      '简答题导入多行内容支持',
+      '简答题 AI 解析包含小题',
+      '清理死代码（旧解析器/AIConfigModal）',
+      'localStorage 写入保护',
+      'clearAll 清理 AI 缓存',
+    ],
+  },
+  {
     version: '1.0.4',
     items: [
       '收藏题库刷题标题独立、标记预加载',

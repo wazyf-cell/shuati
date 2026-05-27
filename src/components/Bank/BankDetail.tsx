@@ -107,6 +107,7 @@ export function BankDetail({ bankId, onBack, onStartPractice }: BankDetailProps)
   };
 
   return (
+    <>
     <div className="animate-scale-in">
       <button onClick={onBack} className="btn-ghost mb-6 flex items-center gap-2">
         <ArrowLeft className="h-4 w-4" />
@@ -312,6 +313,8 @@ export function BankDetail({ bankId, onBack, onStartPractice }: BankDetailProps)
         />
       )}
 
+    </div>
+
       {showImportModal && (
         <ImportModal
           bankId={bankId}
@@ -319,6 +322,6 @@ export function BankDetail({ bankId, onBack, onStartPractice }: BankDetailProps)
           onImported={() => setShowImportModal(false)}
         />
       )}
-    </div>
+    </>
   );
 }

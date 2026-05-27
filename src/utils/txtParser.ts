@@ -221,18 +221,36 @@ function parseQuestionBlock(block: string, blockIndex: number): ParsedQuestion {
   }
   idx++;
 
+  const resolvedType = tagData?.type ?? 'single';
+  const resolvedSubType = tagData?.subType;
+
   // 跳过空行
   while (idx < rawLines.length && rawLines[idx].trim() === '') idx++;
 
-  const content = idx < rawLines.length ? rawLines[idx].trim() : '';
+  // 题目内容（简答题支持多行）
+  const contentLines: string[] = [];
+  if (resolvedType === 'short') {
+    while (idx < rawLines.length) {
+      const t = rawLines[idx].trim();
+      if (t.startsWith('答案：') || t.startsWith('答案:') ||
+          t.startsWith('解析：') || t.startsWith('解析:') ||
+          /^答案\d+[：:]/.test(t) ||
+          /^小题\d+[：:]/.test(t) ||
+          /^\d+[．.\u3000 ]/.test(t)) {
+        break;
+      }
+      contentLines.push(rawLines[idx]);
+      idx++;
+    }
+  } else if (idx < rawLines.length) {
+    contentLines.push(rawLines[idx]);
+    idx++;
+  }
+
+  const content = contentLines.map((l) => l.trim()).filter(Boolean).join('\n');
   if (!content) {
     errors.push('缺少题目内容');
   }
-  idx++;
-
-  // 根据题型分派到专用解析器
-  const resolvedType = tagData?.type ?? 'single';
-  const resolvedSubType = tagData?.subType;
 
   if (resolvedType === 'fill') {
     const result = parseFillQuestion(rawLines, idx, content, blockIndex, errors);
@@ -396,7 +414,21 @@ B. 错误
 答案1：温室效应
 小题2：(2) 该现象产生的主要原因是什么？
 答案2：二氧化碳排放过多
-解析：环境保护相关知识点`;
+解析：环境保护相关知识点
+
+[简答-大题]
+阅读下面短文，从每题所给的四个选项中选出最佳选项。
+When I was a child, I loved to visit my grandmother's farm...
+小题1：1. The author visited the farm __.
+A. every weekend  B. every summer  C. every winter  D. every month
+答案1：B
+小题2：2. The author learned __ from his grandmother.
+A. how to cook  B. how to read  C. how to be patient  D. how to drive
+答案2：C
+小题3：3. What is the best title for this passage?
+A. My Grandmother's Farm  B. How to Work Hard  C. Summer Vacation  D. My Parents
+答案3：A
+解析：文章讲述作者在奶奶农场的经历`;
 }
 
 export default parseTxt;

@@ -1,14 +1,16 @@
 import { useState, useRef } from 'react';
-import { Upload, Download, BarChart3, Sparkles, BookOpen, Cpu, Settings as SettingsIcon } from 'lucide-react';
+import { Upload, Download, BarChart3, Sparkles, BookOpen, Cpu, Settings as SettingsIcon, ArrowLeft } from 'lucide-react';
 import { useBankStore, useToastStore } from '../../store';
 import { storage } from '../../utils/storage';
 
 
 interface HeaderProps {
   onNavigate: (page: string) => void;
+  canBack?: boolean;
+  onNavBack?: () => void;
 }
 
-export function Header({ onNavigate }: HeaderProps) {
+export function Header({ onNavigate, canBack, onNavBack }: HeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editingBankId, setEditingBankId] = useState<string | null>(null);
   const [editBankName, setEditBankName] = useState('');
@@ -135,6 +137,7 @@ export function Header({ onNavigate }: HeaderProps) {
   };
 
   return (
+    <>
     <header className="sticky top-0 z-50 bg-surface-50/80 dark:bg-surface-800/80 backdrop-blur-xl border-b-2 border-surface-500/10 dark:border-surface-100/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
@@ -146,6 +149,18 @@ export function Header({ onNavigate }: HeaderProps) {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={onNavBack}
+              disabled={!canBack}
+              className={`p-2 rounded-xl transition-colors ${
+                canBack
+                  ? 'text-surface-400 dark:text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-700'
+                  : 'text-surface-200 dark:text-surface-600 cursor-not-allowed'
+              }`}
+              title="返回上一页"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
             <button
               onClick={() => onNavigate('dashboard')}
               className="p-2 text-accent-500 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-900/20 rounded-xl transition-colors"
@@ -195,25 +210,26 @@ export function Header({ onNavigate }: HeaderProps) {
             </button>
 
             <button
-              onClick={() => onNavigate('settings')}
-              className="p-2 text-surface-500 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700 rounded-xl transition-colors"
-              title="设置与更新"
-            >
-              <SettingsIcon className="h-5 w-5" />
-            </button>
-
-            <button
               onClick={() => onNavigate('ai')}
               className="p-2 text-accent-500 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-900/20 rounded-xl transition-colors"
               title="AI 配置"
             >
               <Cpu className="h-5 w-5" />
             </button>
+
+            <button
+              onClick={() => onNavigate('settings')}
+              className="p-2 text-surface-500 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700 rounded-xl transition-colors"
+              title="设置与更新"
+            >
+              <SettingsIcon className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>
+    </header>
 
-      {editingBankId && (
+    {editingBankId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setEditingBankId(null)}>
           <div className="card p-6 w-full max-w-md mx-4 animate-bounce-in" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-display font-bold text-surface-800 dark:text-surface-200 mb-4">重命名题库</h3>
@@ -267,6 +283,6 @@ export function Header({ onNavigate }: HeaderProps) {
         </div>
       )}
 
-    </header>
+    </>
   );
 }

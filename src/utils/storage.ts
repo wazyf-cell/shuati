@@ -23,7 +23,7 @@ export const storage = {
   },
 
   setBanks(banks: QuestionBank[]): void {
-    localStorage.setItem(STORAGE_KEYS.BANKS, JSON.stringify(banks));
+    try { localStorage.setItem(STORAGE_KEYS.BANKS, JSON.stringify(banks)); } catch {}
   },
 
   getWrong(): WrongQuestion[] {
@@ -37,7 +37,7 @@ export const storage = {
   },
 
   setWrong(wrong: WrongQuestion[]): void {
-    localStorage.setItem(STORAGE_KEYS.WRONG, JSON.stringify(wrong));
+    try { localStorage.setItem(STORAGE_KEYS.WRONG, JSON.stringify(wrong)); } catch {}
   },
 
   getRecords(): PracticeRecord[] {
@@ -46,7 +46,7 @@ export const storage = {
   },
 
   setRecords(records: PracticeRecord[]): void {
-    localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records));
+    try { localStorage.setItem(STORAGE_KEYS.RECORDS, JSON.stringify(records)); } catch {}
   },
 
   getConfig(): UserConfig {
@@ -56,14 +56,16 @@ export const storage = {
   },
 
   setConfig(config: UserConfig): void {
-    localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(config));
+    try { localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(config)); } catch {}
   },
 
   clearAll(): void {
-    localStorage.removeItem(STORAGE_KEYS.BANKS);
-    localStorage.removeItem(STORAGE_KEYS.WRONG);
-    localStorage.removeItem(STORAGE_KEYS.RECORDS);
-    localStorage.removeItem(STORAGE_KEYS.CONFIG);
+    try { localStorage.removeItem(STORAGE_KEYS.BANKS); } catch {}
+    try { localStorage.removeItem(STORAGE_KEYS.WRONG); } catch {}
+    try { localStorage.removeItem(STORAGE_KEYS.RECORDS); } catch {}
+    try { localStorage.removeItem(STORAGE_KEYS.CONFIG); } catch {}
+    try { localStorage.removeItem('ai_config'); } catch {}
+    try { localStorage.removeItem('ai_explanations'); } catch {}
   },
 
   exportData(): string {
