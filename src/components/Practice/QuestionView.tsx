@@ -49,7 +49,7 @@ export const QuestionView = memo(function QuestionView() {
         </button>
       </div>
 
-      <h3 className="text-lg font-display font-bold text-surface-800 dark:text-surface-200 leading-relaxed">
+      <h3 className="text-lg font-display font-bold text-surface-800 dark:text-surface-200 leading-relaxed whitespace-pre-wrap">
         {question.content}
       </h3>
     </div>

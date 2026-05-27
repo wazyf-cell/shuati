@@ -165,7 +165,7 @@ export const OptionPanel = memo(function OptionPanel({
 
             return (
               <div key={sq.id} className="space-y-1.5">
-                <label className="block text-sm font-bold text-surface-900 dark:text-surface-100 font-body">
+                <label className="block text-sm font-bold text-surface-900 dark:text-surface-100 font-body whitespace-pre-wrap">
                   {sq.label}
                 </label>
                 <div className="relative">
