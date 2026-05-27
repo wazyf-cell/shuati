@@ -19,6 +19,16 @@ interface ChangelogEntry {
 // 硬编码兜底（网页版 fetch 被 CORS 拦截时使用）
 const FALLBACK_CHANGELOG: ChangelogEntry[] = [
   {
+    version: '1.0.6',
+    items: [
+      '简答大题导入支持多行选项',
+      '完形/阅读/七选五/选词填空导入示例',
+      '刷题题目和选项支持换行显示',
+      '导入格式规范增加 AI 格式提示',
+      'CLAUDE.md 发布流程规范化',
+    ],
+  },
+  {
     version: '1.0.5',
     items: [
       '导航栏新增返回按钮（支持历史回溯）',
@@ -86,22 +96,6 @@ const FALLBACK_CHANGELOG: ChangelogEntry[] = [
     ],
   },
 ];
-
-// 从 version.json 解析更新日志
-function parseNotes(notes: string): ChangelogEntry[] {
-  const entries: ChangelogEntry[] = [];
-  const blocks = notes.split(/\n\n(?=v\d)/);
-  for (const block of blocks) {
-    const lines = block.trim().split('\n');
-    const version = lines[0].replace(/^v/, '').trim();
-    const items = lines.slice(1).map((l) => l.trim()).filter(Boolean);
-    if (version && items.length > 0) {
-      entries.push({ version, items });
-    }
-  }
-  return entries;
-}
-
 interface SettingsProps {
   onBack: () => void;
 }
@@ -137,7 +131,7 @@ export function Settings({ onBack }: SettingsProps) {
           } else {
             setNoUpdate(true);
           }
-          setChangelog(parseNotes(data.notes || ''));
+          // Tauri：也不覆盖本地 changelog，远程 notes 仅用于弹窗
         } else {
           const res = await fetch(UPDATE_URL, { signal: AbortSignal.timeout(5000) });
           if (!res.ok) return;
@@ -148,7 +142,7 @@ export function Settings({ onBack }: SettingsProps) {
           } else {
             setNoUpdate(true);
           }
-          setChangelog(parseNotes(data.notes || ''));
+          // 网页版：只查版本，不用远程 notes
         }
       } catch (e: any) {
         setNetworkError(true);

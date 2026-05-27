@@ -74,60 +74,86 @@ android/                        # Capacitor Android 项目
 
 ### 版本号 ⭐
 - **唯一出口：** `src/version.ts` 的 `APP_VERSION`
-- 同步更新：`package.json`、`src-tauri/tauri.conf.json`、`gitee-update/version.json`
-- `Settings` 和 `App.tsx` 都从 `src/version.ts` import
+- 发版时同步更新 `package.json`、`src-tauri/tauri.conf.json`、`gitee-update/version.json`
 
-### 更新日志
-- `FALLBACK_CHANGELOG`（`src/components/Settings/index.tsx`）是**权威更新日志**，每次发版必须更新
-- `gitee-update/version.json` 的 `notes` 同步更新（走 Gitee 的网络源）
-- **CORS 问题：** 网页版 fetch Gitee 会被拦截 → 自动降级到 `FALLBACK_CHANGELOG`。Tauri/APK 不受影响
-- **发版必须两处同步：** `FALLBACK_CHANGELOG` + `version.json.notes`
+### 更新日志（硬编码）
+- `FALLBACK_CHANGELOG`（`src/components/Settings/index.tsx`）是**离线兜底**，每次发版必须更新
+- `version.json.notes` 同步更新（网络源，Gitee CORS 下自动降级到 `FALLBACK_CHANGELOG`）
+
+### 下载源
+- **exe/setup** → Gitee  Raw
+- **APK** → GitHub Raw
+- **version.json** → Gitee
 
 ### 导入格式
-- TXT：按题型标签分类，答案用 `答案：` 开头（不是 `正确答案：`）
+- TXT：答案用 `答案：` 开头（不是 `正确答案：`）
 - Excel：第一行表头，支持中英文列名
 - 详见 `导入格式规范.md`
 
 ### 数据流
-- 用户数据全在 localStorage（`quiz_banks`, `quiz_wrong`, `quiz_config`）
-- AI 配置存 `ai_config`（API key 经 btoa 编码）
-- AI 解析缓存存 `ai_explanations`（按题目 ID）
-- 收藏夹在 `quiz_config.favorites` 数组
+- localStorage keys: `quiz_banks`, `quiz_wrong`, `quiz_config`, `ai_config`, `ai_explanations`
+- API key 经 btoa 编码、收藏夹在 `quiz_config.favorites` 数组
 
 ### AI 解析
-- 两套独立体系：
-  - `question.analysis`：通用解析（手动写 / 编辑时 AI 生成，存题库数据）
-  - `AIExplanationCard`：个性化错题解析（缓存 localStorage `ai_explanations`）
-- 支持 6 个平台：硅基流动、OpenAI、DeepSeek、Azure、Gemini、Claude
-- 配置方式：AI 平台首页 → 选择平台 → 填 API Key → 测试连接
+- `question.analysis`（存题库）/ `AIExplanationCard`（缓存）
+- 6 个平台：硅基流动、OpenAI、DeepSeek、Azure、Gemini、Claude
 
-### 下载源
-- **exe/setup** → Gitee（国内下载快）
-- **APK** → GitHub Raw（`raw.githubusercontent.com/wazyf-cell/shuati/main/gitee-update/app-debug.apk`）
-- **version.json** → Gitee
+## 发布流程（严格遵守）
 
-## 构建与发布
+### 阶段 1：确认版本
+1. 用户说"发布新版本"或"构建项目" → **必须先询问**："作为新版本发布还是仅重新构建？"
+2. 如果是新版本 → 更新 `src/version.ts`，询问版本号和更新内容
 
+### 阶段 2：更新日志 ⚠️ 最容易忘
+**每次发版必须同步更新三处（缺一不可）：**
+1. `src/components/Settings/index.tsx` — `FALLBACK_CHANGELOG`（exe/apk 硬编码兜底）
+2. `gitee-update/version.json` — `version` + `notes`（Gitee 网络源，fetch 成功时用户看到的）
+3. 两处 notes 内容必须完全一致
+
+**验证：** 完成后 check `gitee-update/version.json` 版本号和第一条 notes 是否为新版本。
+
+### 阶段 2.5：验证（网页版检查）⚠️ 必经
+- 确保 `npm run dev` 正在运行
+- 打开 `http://localhost:5173` → 设置 → 查看更新日志
+- **验证第一行是否为新版本号**（如 v1.0.6）
+- 如果不是 → 说明硬编码没更新或缓存未刷新 → 修复后再继续
+
+### 阶段 3：构建
 ```bash
-# 桌面端完整构建
+# 先关闭正在运行的 shuati.exe
+taskkill /f /im shuati.exe
+
+# 桌面端
 npm run tauri:build
 
-# 手动复制产物
-copy src-tauri\target\release\shuati.exe gitee-update\
-copy src-tauri\target\release\bundle\nsis\shuati_X.X.X_x64-setup.exe gitee-update\
+# 复制产物
+copy /Y src-tauri\target\release\shuati.exe gitee-update\
+copy /Y src-tauri\target\release\bundle\nsis\shuati_X.X.X_x64-setup.exe gitee-update\
 
-# Android 同步（先 npm run build）
+# Android 同步
+npm run build
 npx cap sync android
-# → 然后 Android Studio Build APK → 复制到 gitee-update/app-debug.apk
 ```
 
-每次发版：
-1. 更新 `src/version.ts` + `package.json` + `tauri.conf.json`
-2. 更新 `gitee-update/version.json`（版本号 + 累计 notes）
-3. 执行 `npm run tauri:build`
-4. 复制 exe/setup → `gitee-update/`
-5. `npx cap sync android` → APK 构建 → 复制
-6. 提交并双推 Gitee + GitHub
+### 阶段 4：APK（用户手动）
+- 告诉用户：Android Studio → Build APK → 复制到 `gitee-update/app-debug.apk`
+- 用户说"好了" → 确认 version.json 已更新，提交并双推
+
+### 阶段 5：提交
+```bash
+git add . && git commit -m "release vX.X.X - 更新内容"
+git push origin master    # Gitee
+git push github master    # GitHub
+```
+
+### 快速构建（非新版本）
+如果只是改了代码想验证，不走完整发布流程：
+```bash
+npm run build              # Web
+copy /Y ...                # 需要时
+npx cap sync android       # 需要时
+# 不上传 git
+```
 
 ## Git 提交规范
 

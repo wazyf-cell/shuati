@@ -127,9 +127,16 @@ function parseShortGroupQuestion(
   const subQuestionAnswers: string[] = [];
   let analysis = '';
 
-  const subQRegex = /^小题(\d+)[：:]\s*(.+)$/;
+  const subQRegex = /^小题(\d+)[：:]\s*(.*)$/;
   const numQRegex = /^(\d+)[．.\u3000 ]\s*(.+)$/;
   const answerRegex = /^答案(\d+)[：:]\s*(.+)$/;
+
+  // 判断是否为标记行（小题N：/ 答案N：/ 解析：）
+  const isMarkerLine = (line: string) =>
+    /^小题\d+[：:]/.test(line) ||
+    /^答案\d+[：:]/.test(line) ||
+    /^解析[：:]/.test(line) ||
+    /^\d+[．.\u3000 ]/.test(line);
 
   while (idx < rawLines.length) {
     const trimmed = rawLines[idx].trim();
@@ -143,12 +150,25 @@ function parseShortGroupQuestion(
       idx++;
       continue;
     } else if (subMatch) {
-      subQuestionLabels.push(subMatch[2].trim());
+      // 小题标签 → 收集标签行 + 可能的多行内容
+      const labelLines: string[] = [];
+      if (subMatch[2]) labelLines.push(subMatch[2]);
       idx++;
+      while (idx < rawLines.length && !isMarkerLine(rawLines[idx].trim())) {
+        labelLines.push(rawLines[idx].trim());
+        idx++;
+      }
+      subQuestionLabels.push(labelLines.join('\n'));
       continue;
     } else if (numMatch) {
-      subQuestionLabels.push(numMatch[2].trim());
+      // 序号格式：同上，支持多行
+      const labelLines: string[] = [numMatch[2].trim()];
       idx++;
+      while (idx < rawLines.length && !isMarkerLine(rawLines[idx].trim())) {
+        labelLines.push(rawLines[idx].trim());
+        idx++;
+      }
+      subQuestionLabels.push(labelLines.join('\n'));
       continue;
     }
 

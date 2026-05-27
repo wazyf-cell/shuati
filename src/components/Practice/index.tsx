@@ -1023,7 +1023,7 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
                   })()}
                 </div>
 
-                <h3 className="text-lg font-display font-bold text-surface-800 dark:text-surface-200 leading-relaxed mb-4">
+                <h3 className="text-lg font-display font-bold text-surface-800 dark:text-surface-200 leading-relaxed mb-4 whitespace-pre-wrap">
                   {rq.content}
                 </h3>
 
