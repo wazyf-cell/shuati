@@ -85,7 +85,7 @@ export function FavoriteBank({ onBack, onStartPractice }: FavoriteBankProps) {
           <span className={typeBadges[question.type]}>
             {typeLabels[question.type]}
           </span>
-          <span className="text-sm text-surface-700 dark:text-surface-300 flex-1 truncate">
+          <span className="text-sm text-surface-700 dark:text-surface-300 flex-1 whitespace-pre-wrap line-clamp-2">
             {question.content}
           </span>
           {(() => {

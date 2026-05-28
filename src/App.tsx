@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useConfigStore } from './store';
+import { useConfigStore, usePracticeStore } from './store';
 import { Header } from './components/Layout/Header';
 import { Dashboard } from './components/Dashboard';
 import { BankDetail } from './components/Bank/BankDetail';
@@ -143,12 +143,14 @@ function App() {
   };
 
   const handleStartPractice = (bankId: string) => {
+    usePracticeStore.getState().resetPractice();
     setSelectedBankId(bankId);
     setSelectedBankIds([bankId]);
     navigateWithHistory('practice');
   };
 
   const handleMultiBankPractice = (bankIds: string[]) => {
+    usePracticeStore.getState().resetPractice();
     setSelectedBankIds(bankIds);
     navigateWithHistory('practice');
   };
@@ -162,6 +164,7 @@ function App() {
   };
 
   const handleWrongReview = (questionIds: string[], bankId: string) => {
+    usePracticeStore.getState().resetPractice();
     setSelectedBankId(bankId);
     setPresetQuestionIds(questionIds);
     setPracticeMode('wrong-review');
@@ -169,6 +172,7 @@ function App() {
   };
 
   const handleFavoritePractice = (questionIds: string[], bankId: string) => {
+    usePracticeStore.getState().resetPractice();
     setSelectedBankId(bankId);
     setPresetQuestionIds(questionIds);
     setPracticeMode('favorite');

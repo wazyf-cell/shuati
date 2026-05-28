@@ -366,7 +366,7 @@ export function WrongBook({ onBack, onWrongReview }: WrongBookProps) {
           </span>
 
           {/* Question preview */}
-          <span className="flex-1 text-sm font-body truncate text-surface-800 dark:text-surface-200">
+          <span className="flex-1 text-sm font-body text-surface-800 dark:text-surface-200 whitespace-pre-wrap line-clamp-2">
             {question.content}
           </span>
 

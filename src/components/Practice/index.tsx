@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Send, RotateCcw, Trophy, Keyboard, Play, ChevronUp, ChevronDown, ChevronRight, Lightbulb, Bot, Copy, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Trophy, Keyboard, Play, ChevronUp, ChevronDown, ChevronRight, Flag, Lightbulb, Bot, Copy, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { usePracticeStore, useBankStore, useWrongStore, useToastStore, useConfigStore } from '../../store';
 import { hasAnswer, AnswerValue } from '../../store/practice';
 import { storage } from '../../utils/storage';
@@ -10,6 +10,7 @@ import { QuestionView } from './QuestionView';
 import { OptionPanel } from './OptionPanel';
 import { FeedbackPanel } from './FeedbackPanel';
 import { Timer } from './Timer';
+import { BottomNav } from './BottomNav';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 
@@ -50,7 +51,7 @@ const typeBadges: Record<QuestionType, string> = {
 
 export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: PracticeProps) {
   const { banks } = useBankStore();
-  const { startPractice, currentIndex, questions, answers, setAnswer, nextQuestion, prevQuestion, submitAnswers, isSubmitted, resetPractice, markQuestion, phase, setPhase } = usePracticeStore();
+  const { startPractice, currentIndex, questions, answers, setAnswer, nextQuestion, prevQuestion, submitAnswers, isSubmitted, resetPractice, markQuestion, phase, setPhase, marked } = usePracticeStore();
   const { addWrong } = useWrongStore();
   const { addToast } = useToastStore();
   const { randomOptionOrder, setRandomOptionOrder, multiBankTypeOrder, setMultiBankTypeOrder, showAnswerSwitch, setShowAnswerSwitch, enableAIInPractice, setEnableAIInPractice, autoAddWrong, setAutoAddWrong, favorites } = useConfigStore();
@@ -80,6 +81,11 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
   const [reviewIndex, setReviewIndex] = useState(0);
   const [aiStates, setAiStates] = useState<Record<string, AIState>>({});
   const [practiceShowAI, setPracticeShowAI] = useState(false);
+
+  // #8 监听 mode 变化 → 重置缓存，防止旧 phase 残留导致页面错乱
+  useEffect(() => {
+    resetPractice();
+  }, [mode]);
 
   const hasAIConfig = loadAIConfig() !== null;
   const bank = banks.find((b) => b.id === bankId);
@@ -709,8 +715,8 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
                     <input
                       type="range"
                       min="1"
-                      max={bank?.questions.length || 50}
-                      value={questionCount}
+                      max={isMultiBank ? selectedBanks.reduce((sum, bk) => sum + bk.questions.length, 0) : (bank?.questions.length || 50)}
+                      value={Math.min(questionCount, isMultiBank ? selectedBanks.reduce((sum, bk) => sum + bk.questions.length, 0) : (bank?.questions.length || 50))}
                       onChange={(e) => setQuestionCount(parseInt(e.target.value))}
                       className="w-full accent-accent-500"
                     />
@@ -868,6 +874,7 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
     const wrongCount = questions.filter(q => submitResult.results[q.id] === false).length;
 
     return (
+      <>
       <div className="animate-scale-in">
         <div className="card p-4 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-4">
@@ -911,7 +918,7 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
 
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="lg:w-64 flex-shrink-0">
-            <div className="card p-4">
+            <div className="card p-4 max-h-[80vh] overflow-y-auto">
               {usePerType && mode !== 'wrong-review' ? (() => {
                 const typeRuns: { type: QuestionType; start: number; end: number }[] = [];
                 let curType: QuestionType | null = null;
@@ -1005,6 +1012,17 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
                     {typeLabels[rq.type]}
                   </span>
                   <span className="text-sm text-surface-400">{reviewIndex + 1}/{questions.length}</span>
+                  <button
+                    onClick={() => markQuestion(rq.id)}
+                    className={`ml-auto p-1.5 rounded-lg transition-colors ${
+                      marked.includes(rq.id)
+                        ? 'text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20'
+                        : 'text-surface-300 dark:text-surface-600 hover:bg-surface-100 dark:hover:bg-surface-700'
+                    }`}
+                    title="标记 / 取消标记"
+                  >
+                    <Flag className="h-4 w-4" fill={marked.includes(rq.id) ? 'currentColor' : 'none'} />
+                  </button>
                   {(() => {
                     const ua = answers[rq.id];
                     const userAnsStr = ua ? (Array.isArray(ua) ? ua.join(', ') : Object.values(ua).join(', ')) : '(未作答)';
@@ -1053,30 +1071,21 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
               </div>
             )}
 
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => setReviewIndex(Math.max(0, reviewIndex - 1))}
-                disabled={reviewIndex === 0}
-                className="btn-outline flex items-center gap-1 text-sm disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                上一题
-              </button>
 
-              <span className="text-sm text-surface-400">{reviewIndex + 1} / {questions.length}</span>
-
-              <button
-                onClick={() => setReviewIndex(Math.min(questions.length - 1, reviewIndex + 1))}
-                disabled={reviewIndex === questions.length - 1}
-                className="btn-outline flex items-center gap-1 text-sm disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                下一题
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
           </div>
         </div>
       </div>
+
+      <BottomNav
+        onPrev={() => setReviewIndex(Math.max(0, reviewIndex - 1))}
+        onNext={() => setReviewIndex(Math.min(questions.length - 1, reviewIndex + 1))}
+        currentIndex={reviewIndex}
+        total={questions.length}
+        answeredCount={questions.length - wrongCount}
+        isLast={reviewIndex >= questions.length - 1}
+        showSubmit={false}
+      />
+      </>
     );
   }
 
@@ -1204,44 +1213,17 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-center justify-between pt-4 mt-6 border-t-2 border-surface-900/10 dark:border-surface-100/10 gap-3">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-surface-500 dark:text-surface-300 font-body">
-            已答 {questions.filter((q) => hasAnswer(answers[q.id]) || viewedAnswerIds.has(q.id)).length} / {questions.length} 题
-          </span>
-          <button
-            onClick={() => setShowShortcuts(!showShortcuts)}
-            className="flex items-center gap-1 text-xs text-surface-400 dark:text-surface-400 hover:text-accent-500 dark:hover:text-accent-400 transition-colors font-body"
-            aria-label="查看快捷键"
-          >
-            <Keyboard className="h-3 w-3" />
-            快捷键
-          </button>
-        </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <button
-            onClick={prevQuestion}
-            disabled={currentIndex === 0}
-            className="btn-outline flex items-center gap-1 text-sm flex-1 sm:flex-none justify-center disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            上一题
-          </button>
-
-          {currentIndex < questions.length - 1 ? (
-            <button onClick={nextQuestion} className="btn-outline flex items-center gap-1 text-sm flex-1 sm:flex-none justify-center">
-              下一题
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          ) : (
-            <button onClick={handleSubmit} className="btn-secondary flex items-center gap-1 text-sm flex-1 sm:flex-none justify-center">
-              <Send className="h-4 w-4" />
-              提交答案
-            </button>
-          )}
-        </div>
-      </div>
+      <BottomNav
+        onPrev={prevQuestion}
+        onNext={nextQuestion}
+        onSubmit={handleSubmit}
+        currentIndex={currentIndex}
+        total={questions.length}
+        answeredCount={questions.filter((q) => hasAnswer(answers[q.id]) || viewedAnswerIds.has(q.id)).length}
+        isLast={currentIndex >= questions.length - 1}
+        onShowShortcuts={() => setShowShortcuts(!showShortcuts)}
+      />
 
       <ConfirmDialog
         open={confirmOpen}

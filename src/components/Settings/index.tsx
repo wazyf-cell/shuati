@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Moon, Sun, RefreshCw, Download, X, ArrowLeft, Settings as SettingsIcon, Github } from 'lucide-react';
-import { useConfigStore } from '../../store';
+import { useConfigStore, useToastStore } from '../../store';
 import { APP_VERSION } from '../../version';
+import { storage } from '../../utils/storage';
+import { ConfirmDialog } from '../shared/ConfirmDialog';
 const UPDATE_URL = 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/version.json';
 
 interface UpdateInfo {
@@ -18,6 +20,22 @@ interface ChangelogEntry {
 
 // 硬编码兜底（网页版 fetch 被 CORS 拦截时使用）
 const FALLBACK_CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '1.0.7',
+    items: [
+      'AI 提示词模板系统（3模式 × 3模板，可编辑名称和内容）',
+      '底部导航栏常驻（已答数、快捷键提示、上/下一题）',
+      '刷题/Review 导航栏滚动条 + 高度适配',
+      'Review 支持 Flag 标记同步收藏',
+      '快捷键增强（A/D、Space、数字键、F 标记）',
+      '清空所有数据（设置页一键恢复出厂状态）',
+      '清空标记拆分（错题标记 / 已刷标记分开清理）',
+      'AI 缓存清空加确认弹窗',
+      '页面缓存 Bug 修复（切换刷题模式不串数据）',
+      '多题库滑块上限修复',
+      '错题本/收藏题库长文本不截断',
+    ],
+  },
   {
     version: '1.0.6',
     items: [
@@ -102,6 +120,7 @@ interface SettingsProps {
 
 export function Settings({ onBack }: SettingsProps) {
   const { darkMode, toggleDarkMode } = useConfigStore();
+  const { addToast } = useToastStore();
   const [checking, setChecking] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [checked, setChecked] = useState(false);
@@ -109,6 +128,7 @@ export function Settings({ onBack }: SettingsProps) {
   const [networkError, setNetworkError] = useState(false);
   const [errorDetail, setErrorDetail] = useState('');
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [autoCheckDone, setAutoCheckDone] = useState(false);
   const [manualCheckDone, setManualCheckDone] = useState(false);
   const [changelog, setChangelog] = useState<ChangelogEntry[]>(FALLBACK_CHANGELOG);
@@ -356,6 +376,20 @@ export function Settings({ onBack }: SettingsProps) {
           </div>
         </div>
 
+        {/* 数据管理 */}
+        <div className="card p-6 mb-6">
+          <h3 className="text-lg font-display font-bold text-surface-800 dark:text-surface-200 mb-4">数据管理</h3>
+          <div className="space-y-3">
+            <button
+              onClick={() => setShowClearAllConfirm(true)}
+              className="w-full btn-outline flex items-center justify-between p-3 text-sm border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              <span className="text-red-500 dark:text-red-400 font-bold">清空所有数据</span>
+              <span className="text-red-400 text-xs">⚠ 不可恢复</span>
+            </button>
+          </div>
+        </div>
+
         {/* 关于 */}
         <div className="card p-6">
           <h3 className="text-lg font-display font-bold text-surface-800 dark:text-surface-200 mb-4">关于</h3>
@@ -371,6 +405,20 @@ export function Settings({ onBack }: SettingsProps) {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showClearAllConfirm}
+        message="确定清空所有数据吗？题库、错题、练习记录、配置、AI 设置全部删除，不可恢复！"
+        onConfirm={() => {
+          storage.clearAll();
+          localStorage.removeItem('ai_config');
+          localStorage.removeItem('ai_explanations');
+          addToast('所有数据已清空', 'success');
+          setShowClearAllConfirm(false);
+          setTimeout(() => window.location.reload(), 500);
+        }}
+        onCancel={() => setShowClearAllConfirm(false)}
+      />
     </>
   );
 }

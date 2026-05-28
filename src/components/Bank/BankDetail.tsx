@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { ArrowLeft, Search, Plus, Play, Upload, Eraser } from 'lucide-react';
-import { useBankStore, useWrongStore } from '../../store';
+import { ArrowLeft, Search, Plus, Play, Upload, Eraser, RotateCcw } from 'lucide-react';
+import { useBankStore, useWrongStore, useToastStore } from '../../store';
+import { storage } from '../../utils/storage';
 import { Question, QuestionType } from '../../types';
 import { QuestionForm } from './QuestionForm';
 import { ImportModal } from './ImportModal';
@@ -14,6 +15,7 @@ interface BankDetailProps {
 export function BankDetail({ bankId, onBack, onStartPractice }: BankDetailProps) {
   const { banks, deleteQuestion } = useBankStore();
   const { clearBankWrongs, wrongQuestions } = useWrongStore();
+  const { addToast } = useToastStore();
   const [showForm, setShowForm] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -134,10 +136,27 @@ export function BankDetail({ bankId, onBack, onStartPractice }: BankDetailProps)
           </button>
           <button
             onClick={() => { if (confirm('确定清空该题库所有错题标记？')) { clearBankWrongs(bankId); } }}
-            className="btn-outline flex items-center gap-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+            className="btn-outline flex items-center gap-2 text-sm text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+            title="清除所有错题记录"
           >
             <Eraser className="h-4 w-4" />
-            清空标记
+            清空错题
+          </button>
+          <button
+            onClick={() => {
+              if (confirm('确定清空该题库所有已刷标记？题库题目不受影响。')) {
+                const records = storage.getRecords();
+                const questionIds = new Set(bank?.questions.map(q => q.id) || []);
+                const filtered = records.filter(r => !r.questionIds?.some((qid: string) => questionIds.has(qid)));
+                storage.setRecords(filtered);
+                addToast('已刷标记已清空', 'success');
+              }
+            }}
+            className="btn-outline flex items-center gap-2 text-sm text-surface-500 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-700"
+            title="清除练习记录（题目和错题不受影响）"
+          >
+            <RotateCcw className="h-4 w-4" />
+            清空已刷
           </button>
           <button onClick={() => onStartPractice(bankId)} className="btn-secondary flex items-center gap-2 text-sm">
             <Play className="h-4 w-4" />
