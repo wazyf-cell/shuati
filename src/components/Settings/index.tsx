@@ -500,6 +500,11 @@ export function Settings({ onBack }: SettingsProps) {
                 <h3 className="text-base font-bold text-surface-800 dark:text-surface-200 mb-2">📱 多端使用</h3>
                 <p>支持 Windows 桌面版（exe/安装包）、Android APK、网页版。数据互不相通，各端独立。设置页「关于」区可下载其他平台版本。</p>
               </div>
+
+              <div>
+                <h3 className="text-base font-bold text-surface-800 dark:text-surface-200 mb-2">⚠️ 杀毒误报说明</h3>
+                <p className="text-amber-600 dark:text-amber-400">Windows Defender 可能误报本应用为病毒，这是因为没有购买数字签名证书（每年数千元），而非真正含有病毒。本应用完全开源、无后门、不联网上传数据。如遇拦截请选择「允许运行」或暂时关闭实时保护后安装。</p>
+              </div>
             </div>
 
             <div className="mt-6 pt-4 border-t border-surface-200 dark:border-surface-700 text-center">

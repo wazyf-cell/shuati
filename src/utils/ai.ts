@@ -4,7 +4,7 @@ export const PLATFORM_PRESETS: Record<string, AIPlatformDef> = {
   siliconflow: {
     name: '硅基流动',
     baseUrl: 'https://api.siliconflow.cn/v1',
-    website: 'https://siliconflow.cn/',
+    website: 'https://cloud.siliconflow.cn/i/E8KL16Ge',
     models: [
       { id: 'deepseek-ai/DeepSeek-V3', name: 'DeepSeek-V3' },
       { id: 'deepseek-ai/DeepSeek-R1', name: 'DeepSeek-R1' },
