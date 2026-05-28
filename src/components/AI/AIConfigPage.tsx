@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Eye, EyeOff, ExternalLink, RotateCcw, Save, Cpu, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, ExternalLink, RotateCcw, Save, Cpu, Trash2, Edit3, Check } from 'lucide-react';
 import { useToastStore } from '../../store';
-import { PLATFORM_PRESETS, loadAIConfig, saveAIConfig, clearAIConfig, DEFAULT_PROMPTS, PROMPT_NAMES, clearAICache, testConnection, testModelIdentity } from '../../utils/ai';
-import type { AIConfig } from '../../types';
+import { PLATFORM_PRESETS, loadAIConfig, saveAIConfig, clearAIConfig, clearAICache, testConnection, testModelIdentity, getDefaultTemplates, CONTEXT_LABELS } from '../../utils/ai';
+import type { AIConfig, AIPromptTemplate, PromptContext } from '../../types';
 
 const PLATFORM_KEYS = Object.keys(PLATFORM_PRESETS) as Array<keyof typeof PLATFORM_PRESETS>;
 
@@ -16,13 +16,21 @@ export function AIConfigPage() {
   const [showKey, setShowKey] = useState(false);
   const [customPlatformName, setCustomPlatformName] = useState('');
   const [customModelName, setCustomModelName] = useState('');
-  const [customPrompts, setCustomPrompts] = useState<[string, string, string]>([...DEFAULT_PROMPTS]);
-  const [selectedPromptIndex, setSelectedPromptIndex] = useState(0);
   const [saved, setSaved] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState('');
   const [testError, setTestError] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // 提示词模板
+  const [promptTemplates, setPromptTemplates] = useState<Record<PromptContext, AIPromptTemplate[]>>(getDefaultTemplates());
+  const [activePromptIds, setActivePromptIds] = useState<Record<PromptContext, string>>({
+    practice: promptTemplates.practice[0]?.id || '',
+    review: promptTemplates.review[0]?.id || '',
+    analyze: promptTemplates.analyze[0]?.id || '',
+  });
+  const [activeContext, setActiveContext] = useState<PromptContext>('practice');
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
 
   const preset = PLATFORM_PRESETS[platform];
   const isCustom = platform === 'custom';
@@ -37,8 +45,8 @@ export function AIConfigPage() {
       setMaxTokens(savedCfg.maxTokens || 2000);
       setCustomPlatformName(savedCfg.customPlatformName || '');
       setCustomModelName(savedCfg.customModelName || '');
-      setCustomPrompts(savedCfg.customPrompts || [...DEFAULT_PROMPTS]);
-      setSelectedPromptIndex(savedCfg.selectedPromptIndex ?? 0);
+      if (savedCfg.promptTemplates) setPromptTemplates(savedCfg.promptTemplates);
+      if (savedCfg.activePromptIds) setActivePromptIds(savedCfg.activePromptIds);
     }
   }, []);
 
@@ -73,6 +81,20 @@ export function AIConfigPage() {
 
     const modelToSave = isCustom ? (customModelName.trim() || model) : model;
 
+    // 提交正在编辑的模板（如果有）
+    let finalTemplates = { ...promptTemplates };
+    if (editingTemplateId) {
+      const nameInput = document.getElementById(`tpl-name-${editingTemplateId}`) as HTMLInputElement;
+      const contentTextarea = document.getElementById(`tpl-content-${editingTemplateId}`) as HTMLTextAreaElement;
+      if (nameInput && contentTextarea) {
+        finalTemplates[activeContext] = finalTemplates[activeContext].map(t =>
+          t.id === editingTemplateId ? { ...t, name: nameInput.value, content: contentTextarea.value } : t
+        );
+      }
+      setPromptTemplates(finalTemplates);
+      setEditingTemplateId(null);
+    }
+
     const config: AIConfig = {
       platform: platform as AIConfig['platform'],
       apiKey: effectiveApiKey,
@@ -81,8 +103,8 @@ export function AIConfigPage() {
       maxTokens,
       customPlatformName: isCustom ? (customPlatformName.trim() || undefined) : undefined,
       customModelName: isCustom ? (customModelName.trim() || undefined) : undefined,
-      customPrompts,
-      selectedPromptIndex,
+      promptTemplates,
+      activePromptIds,
     };
 
     saveAIConfig(config);
@@ -91,9 +113,12 @@ export function AIConfigPage() {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const [showClearCacheConfirm, setShowClearCacheConfirm] = useState(false);
+
   const handleClearCache = () => {
     clearAICache();
     addToast('AI 解析缓存已清空', 'success');
+    setShowClearCacheConfirm(false);
   };
 
   const handleTestConnection = async () => {
@@ -112,8 +137,8 @@ export function AIConfigPage() {
         baseUrl: isCustom ? baseUrl.trim() : baseUrl,
         model,
         maxTokens,
-        customPrompts,
-        selectedPromptIndex,
+        promptTemplates,
+        activePromptIds,
       };
       await testConnection(config);
       setTestResult('API 连接正常，配置无误。');
@@ -135,16 +160,16 @@ export function AIConfigPage() {
     setTestResult('');
     setTestError(false);
     try {
-      const config: AIConfig = {
+      const config2: AIConfig = {
         platform: platform as AIConfig['platform'],
         apiKey: effectiveApiKey,
         baseUrl: isCustom ? baseUrl.trim() : baseUrl,
         model,
         maxTokens,
-        customPrompts,
-        selectedPromptIndex,
+        promptTemplates,
+        activePromptIds,
       };
-      const reply = await testModelIdentity(config);
+      const reply = await testModelIdentity(config2);
       setTestResult(reply);
     } catch (e: any) {
       setTestError(true);
@@ -164,8 +189,13 @@ export function AIConfigPage() {
     setMaxTokens(2000);
     setCustomPlatformName('');
     setCustomModelName('');
-    setCustomPrompts([...DEFAULT_PROMPTS]);
-    setSelectedPromptIndex(0);
+    setPromptTemplates(getDefaultTemplates());
+    const defaults = getDefaultTemplates();
+    setActivePromptIds({
+      practice: defaults.practice[0].id,
+      review: defaults.review[0].id,
+      analyze: defaults.analyze[0].id,
+    });
     setShowResetConfirm(false);
     addToast('AI 配置已重置', 'success');
   };
@@ -339,62 +369,6 @@ export function AIConfigPage() {
         </div>
       </div>
 
-      {/* 提示词编辑 */}
-      <div className="card p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-display font-bold text-surface-800 dark:text-surface-200">
-            提示词模板
-          </h3>
-        </div>
-
-        <div className="flex gap-2">
-          {PROMPT_NAMES.map((name, i) => (
-            <button
-              key={i}
-              onClick={() => setSelectedPromptIndex(i)}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
-                selectedPromptIndex === i
-                  ? 'bg-accent-500 text-white shadow-sm'
-                  : 'bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-600'
-              }`}
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-surface-500 dark:text-surface-400">
-              编辑「{PROMPT_NAMES[selectedPromptIndex]}」
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                const newPrompts = [...customPrompts] as [string, string, string];
-                newPrompts[selectedPromptIndex] = DEFAULT_PROMPTS[selectedPromptIndex];
-                setCustomPrompts(newPrompts);
-              }}
-              className="inline-flex items-center gap-1 text-xs text-accent-500 hover:text-accent-600 transition-colors"
-            >
-              <RotateCcw className="h-3 w-3" />
-              重置当前
-            </button>
-          </div>
-          <textarea
-            value={customPrompts[selectedPromptIndex]}
-            onChange={(e) => {
-              const newPrompts = [...customPrompts] as [string, string, string];
-              newPrompts[selectedPromptIndex] = e.target.value;
-              setCustomPrompts(newPrompts);
-            }}
-            rows={8}
-            className="input resize-y font-mono text-sm"
-            placeholder="输入自定义提示词模板..."
-          />
-        </div>
-      </div>
-
       {/* 测试连接 */}
       <div className="card p-6 space-y-4">
         <h3 className="text-lg font-display font-bold text-surface-800 dark:text-surface-200">
@@ -433,6 +407,113 @@ export function AIConfigPage() {
         )}
       </div>
 
+      {/* 提示词模板 */}
+      <div className="card p-6 mb-6">
+        <h3 className="text-lg font-display font-bold text-surface-800 dark:text-surface-200 mb-2">提示词模板</h3>
+        <p className="text-sm text-surface-500 dark:text-surface-400 mb-4">为不同场景选择或编辑 AI 提示词</p>
+
+        {/* 模式标签 */}
+        <div className="flex gap-2 mb-4">
+          {(['practice', 'review', 'analyze'] as PromptContext[]).map((ctx) => (
+            <button
+              key={ctx}
+              onClick={() => { setActiveContext(ctx); setEditingTemplateId(null); }}
+              className={`px-4 py-2 rounded-xl font-bold text-sm transition-colors ${
+                activeContext === ctx
+                  ? 'bg-accent-500 text-white'
+                  : 'bg-surface-100 dark:bg-surface-700 text-surface-500 dark:text-surface-400 hover:bg-surface-200 dark:hover:bg-surface-600'
+              }`}
+            >
+              {CONTEXT_LABELS[ctx]}
+            </button>
+          ))}
+        </div>
+
+        {/* 模板卡片 */}
+        <div className="space-y-3">
+          {(promptTemplates[activeContext] || []).map((tpl) => {
+            const isActive = activePromptIds[activeContext] === tpl.id;
+            const isEditing = editingTemplateId === tpl.id;
+
+            return (
+              <div
+                key={tpl.id}
+                className={`p-4 rounded-xl border-2 transition-colors ${
+                  isActive
+                    ? 'border-accent-400 bg-accent-50/50 dark:bg-accent-900/10'
+                    : 'border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-surface-800'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      defaultValue={tpl.name}
+                      id={`tpl-name-${tpl.id}`}
+                      className="text-sm font-bold bg-white dark:bg-surface-700 border border-surface-300 dark:border-surface-600 rounded-lg px-2 py-1 flex-1 mr-2"
+                      placeholder="模板名称"
+                    />
+                  ) : (
+                    <span className="text-sm font-bold text-surface-800 dark:text-surface-200">{tpl.name}</span>
+                  )}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        if (isEditing) {
+                          const nameInput = document.getElementById(`tpl-name-${tpl.id}`) as HTMLInputElement;
+                          const contentTextarea = document.getElementById(`tpl-content-${tpl.id}`) as HTMLTextAreaElement;
+                          const updated: AIPromptTemplate = {
+                            ...tpl,
+                            name: nameInput?.value || tpl.name,
+                            content: contentTextarea?.value || tpl.content,
+                          };
+                          const newTemplates = { ...promptTemplates };
+                          newTemplates[activeContext] = newTemplates[activeContext].map(t =>
+                            t.id === tpl.id ? updated : t
+                          );
+                          setPromptTemplates(newTemplates);
+                          setEditingTemplateId(null);
+                        } else {
+                          setEditingTemplateId(tpl.id);
+                        }
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-surface-200 dark:hover:bg-surface-600 transition-colors"
+                      title={isEditing ? '保存' : '编辑'}
+                    >
+                      {isEditing ? <Check className="h-4 w-4 text-emerald-500" /> : <Edit3 className="h-4 w-4 text-surface-400" />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActivePromptIds({ ...activePromptIds, [activeContext]: tpl.id });
+                      }}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                        isActive
+                          ? 'bg-accent-500 text-white'
+                          : 'bg-surface-200 dark:bg-surface-600 text-surface-500 dark:text-surface-400 hover:bg-accent-100 dark:hover:bg-accent-900/30'
+                      }`}
+                    >
+                      {isActive ? '使用中' : '选用'}
+                    </button>
+                  </div>
+                </div>
+
+                {isEditing ? (
+                  <textarea
+                    id={`tpl-content-${tpl.id}`}
+                    defaultValue={tpl.content}
+                    rows={4}
+                    className="w-full text-sm bg-white dark:bg-surface-700 border border-surface-300 dark:border-surface-600 rounded-lg p-3 resize-y"
+                    placeholder="提示词内容"
+                  />
+                ) : (
+                  <p className="text-xs text-surface-500 dark:text-surface-400 whitespace-pre-wrap line-clamp-3">{tpl.content}</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 操作区 */}
       <div className="flex flex-wrap gap-3">
         <button
@@ -443,7 +524,7 @@ export function AIConfigPage() {
           保存配置
         </button>
         <button
-          onClick={handleClearCache}
+          onClick={() => setShowClearCacheConfirm(true)}
           className="btn-ghost flex items-center gap-2 text-amber-500"
         >
           <RotateCcw className="h-4 w-4" />
@@ -471,6 +552,21 @@ export function AIConfigPage() {
             <div className="flex gap-3">
               <button onClick={() => setShowResetConfirm(false)} className="btn-ghost flex-1">取消</button>
               <button onClick={handleReset} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 px-4 rounded-xl flex-1 transition-colors">确认重置</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showClearCacheConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setShowClearCacheConfirm(false)}>
+          <div className="card p-6 w-full max-w-md mx-4 animate-bounce-in" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-display font-bold text-surface-900 dark:text-surface-100 mb-2">清空 AI 缓存</h3>
+            <p className="text-sm text-surface-500 dark:text-surface-400 mb-4">
+              确定清空所有 AI 解析缓存吗？已缓存的解析结果将被删除，同一题目下次需要重新生成。
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowClearCacheConfirm(false)} className="btn-ghost flex-1">取消</button>
+              <button onClick={handleClearCache} className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl flex-1 transition-colors">确认清空</button>
             </div>
           </div>
         </div>

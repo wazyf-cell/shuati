@@ -118,8 +118,8 @@ export const QuestionNav = memo(function QuestionNav({ usePerType }: QuestionNav
   };
 
   return (
-    <div>
-      <h4 className="text-sm font-display font-bold text-surface-600 dark:text-surface-400 mb-3">题目导航</h4>
+    <div className="max-h-[90vh] overflow-y-auto">
+      <h4 className="text-sm font-display font-bold text-surface-600 dark:text-surface-400 mb-3 sticky top-0 bg-surface-50/90 dark:bg-surface-800/90 backdrop-blur-sm py-1 z-10">题目导航</h4>
       {usePerType ? renderTypeSegments() : renderFlatGrid()}
       <div className="flex flex-wrap gap-3 mt-3 text-xs font-body">
         <span className="flex items-center gap-1 text-surface-600 dark:text-surface-400">

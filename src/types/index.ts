@@ -1,5 +1,13 @@
 export type QuestionType = 'single' | 'multiple' | 'judge' | 'fill' | 'short';
 
+export interface AIPromptTemplate {
+  id: string;
+  name: string;
+  content: string;
+}
+
+export type PromptContext = 'practice' | 'review' | 'analyze';
+
 export interface AIConfig {
   platform: 'siliconflow' | 'openai' | 'deepseek' | 'azure' | 'google' | 'claude' | 'custom';
   apiKey: string;
@@ -8,8 +16,12 @@ export interface AIConfig {
   maxTokens: number;
   customPlatformName?: string;
   customModelName?: string;
-  customPrompts: [string, string, string];
-  selectedPromptIndex: number;
+  // 旧字段（兼容迁移）
+  customPrompts?: [string, string, string];
+  selectedPromptIndex?: number;
+  // 新字段
+  promptTemplates?: Record<PromptContext, AIPromptTemplate[]>;
+  activePromptIds?: Record<PromptContext, string>;
 }
 
 export interface AIPlatformDef {

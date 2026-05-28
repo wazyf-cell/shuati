@@ -1,4 +1,4 @@
-import type { AIConfig, AIPlatformDef, Question, QuestionType } from '../types';
+import type { AIConfig, AIPlatformDef, AIPromptTemplate, PromptContext, Question, QuestionType } from '../types';
 
 export const PLATFORM_PRESETS: Record<string, AIPlatformDef> = {
   siliconflow: {
@@ -91,8 +91,60 @@ export const DEFAULT_PROMPTS: [string, string, string] = [
 
 export const PROMPT_NAMES = ['简洁模式', '详细模式', '错题模式'];
 
-export function getSelectedPromptName(config: AIConfig): string {
-  return PROMPT_NAMES[config.selectedPromptIndex] || '自定义提示词';
+// 新模板系统（v1.1.0）
+function uuid() { return crypto.randomUUID(); }
+
+export const DEFAULT_TEMPLATES: Record<PromptContext, AIPromptTemplate[]> = {
+  practice: [
+    { id: uuid(), name: '简洁解析', content: '请对以下题目进行简短解析，指出考点和正确答案原因。' },
+    { id: uuid(), name: '详细讲解', content: '请你扮演一位经验丰富的教师，对以下题目进行详细解析。\n要求：\n1) 逐一分析每个选项的对错原因\n2) 指出题目考察的知识点\n3) 给出解题思路和技巧' },
+    { id: uuid(), name: '错题剖析', content: '这道题我做错了，请帮我分析：\n1) 正确答案为什么是对的\n2) 我选的答案错在哪里（思维误区）\n3) 如何避免再犯类似错误' },
+  ],
+  review: [
+    { id: uuid(), name: '简洁回顾', content: '请简要回顾这道题的解题要点。' },
+    { id: uuid(), name: '详细复习', content: '请你扮演一位资深教师，在回顾错题时给出详细解析：\n1) 题目知识点梳理\n2) 每个选项的详细分析\n3) 同类题目的解题套路' },
+    { id: uuid(), name: '知识巩固', content: '请针对这道错题，帮我：\n1) 总结核心知识点\n2) 设计一道变式题巩固理解\n3) 给出记忆口诀或技巧' },
+  ],
+  analyze: [
+    { id: uuid(), name: '快速分析', content: '请快速分析这道题目的考点和难度。' },
+    { id: uuid(), name: '深度分析', content: '请对这道题目进行深度分析：\n1) 考查的知识点和能力\n2) 题目难度评估\n3) 常见错误类型\n4) 教学建议' },
+    { id: uuid(), name: '命题思路', content: '请分析这道题目的命题思路：\n1) 命题人想考察什么\n2) 干扰项的设计逻辑\n3) 与课程标准的对应关系' },
+  ],
+};
+
+export const CONTEXT_LABELS: Record<PromptContext, string> = {
+  practice: '刷题',
+  review: 'Review',
+  analyze: '分析',
+};
+
+export function getDefaultTemplates(): Record<PromptContext, AIPromptTemplate[]> {
+  return JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+}
+
+export function getActivePrompt(config: AIConfig, context: PromptContext): string {
+  const templates = config.promptTemplates?.[context];
+  const activeId = config.activePromptIds?.[context];
+  if (templates && activeId) {
+    const t = templates.find(t => t.id === activeId);
+    if (t) return t.content;
+  }
+  // fallback
+  return DEFAULT_TEMPLATES[context][0].content;
+}
+
+export function getSelectedPromptName(config: AIConfig, context?: PromptContext): string {
+  if (context && config.promptTemplates && config.activePromptIds) {
+    const templates = config.promptTemplates[context];
+    const activeId = config.activePromptIds[context];
+    const t = templates?.find(t => t.id === activeId);
+    if (t) return t.name;
+  }
+  // 旧版兼容
+  if (config.selectedPromptIndex !== undefined) {
+    return PROMPT_NAMES[config.selectedPromptIndex] || '自定义提示词';
+  }
+  return '自定义提示词';
 }
 
 export function loadAIConfig(): AIConfig | null {
@@ -103,11 +155,33 @@ export function loadAIConfig(): AIConfig | null {
     if (config.apiKey) {
       config.apiKey = atob(config.apiKey);
     }
-    if (!config.customPrompts || config.customPrompts.length !== 3) {
-      config.customPrompts = [...DEFAULT_PROMPTS];
+    // 迁移旧版 customPrompts → 新版 promptTemplates
+    if (!config.promptTemplates && config.customPrompts) {
+      const defaults = getDefaultTemplates();
+      config.promptTemplates = {
+        practice: config.customPrompts.map((content, i) => ({
+          ...defaults.practice[i],
+          content,
+        })),
+        review: defaults.review,
+        analyze: defaults.analyze,
+      };
+      config.activePromptIds = {
+        practice: config.promptTemplates.practice[config.selectedPromptIndex || 0].id,
+        review: config.promptTemplates.review[0].id,
+        analyze: config.promptTemplates.analyze[0].id,
+      };
+      delete config.customPrompts;
+      delete config.selectedPromptIndex;
     }
-    if (config.selectedPromptIndex === undefined || config.selectedPromptIndex === null) {
-      config.selectedPromptIndex = 0;
+    // 确保新字段存在
+    if (!config.promptTemplates || !config.activePromptIds) {
+      config.promptTemplates = getDefaultTemplates();
+      config.activePromptIds = {
+        practice: config.promptTemplates.practice[0].id,
+        review: config.promptTemplates.review[0].id,
+        analyze: config.promptTemplates.analyze[0].id,
+      };
     }
     return config;
   } catch {
@@ -247,11 +321,10 @@ export async function generateExplanation(
   question: Question,
   userAnswer: string[],
   config: AIConfig,
+  context: PromptContext = 'practice',
 ): Promise<string> {
   const typeLabel = TYPE_LABELS[question.type] || '未知题型';
-  const promptTemplate = (config.customPrompts && config.customPrompts[config.selectedPromptIndex])
-    ? config.customPrompts[config.selectedPromptIndex]
-    : DEFAULT_PROMPTS[0];
+  const promptTemplate = getActivePrompt(config, context);
 
   let prompt = `${promptTemplate}\n\n`;
   prompt += `题型：${typeLabel}\n`;
