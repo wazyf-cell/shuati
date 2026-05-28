@@ -137,7 +137,10 @@ npx cap sync android
 
 ### 阶段 4：APK（用户手动）
 - 告诉用户：Android Studio → Build APK → 复制到 `gitee-update/app-debug.apk`
-- 用户说"好了" → 确认 version.json 已更新，提交并双推
+- 用户说"好了" → **自动改名** `app-debug.apk` → `app-{version}.apk`（如 `app-1.0.7.apk`）
+- 同步更新 `gitee-update/version.json` 的 `apkDownloadUrl` 为 `app-{version}.apk`
+- 同步更新 `src/components/Settings/index.tsx` 下载安卓版链接
+- 提交并双推
 
 ### 阶段 5：提交
 ```bash

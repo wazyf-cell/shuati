@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, RotateCcw, Trophy, Keyboard, Play, ChevronUp, ChevronDown, ChevronRight, Flag, Lightbulb, Bot, Copy, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { usePracticeStore, useBankStore, useWrongStore, useToastStore, useConfigStore } from '../../store';
 import { hasAnswer, AnswerValue } from '../../store/practice';
@@ -82,10 +82,14 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
   const [aiStates, setAiStates] = useState<Record<string, AIState>>({});
   const [practiceShowAI, setPracticeShowAI] = useState(false);
 
-  // #8 监听 mode 变化 → 重置缓存，防止旧 phase 残留导致页面错乱
+  // 仅 mode 真正变化时重置（跳过首次 mount）
+  const prevModeRef = useRef(mode);
   useEffect(() => {
-    resetPractice();
-  }, [mode]);
+    if (prevModeRef.current !== mode) {
+      prevModeRef.current = mode;
+      resetPractice();
+    }
+  }, [mode, resetPractice]);
 
   const hasAIConfig = loadAIConfig() !== null;
   const bank = banks.find((b) => b.id === bankId);
