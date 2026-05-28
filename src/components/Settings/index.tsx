@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Moon, Sun, RefreshCw, Download, X, ArrowLeft, Settings as SettingsIcon, Github } from 'lucide-react';
+import { Moon, Sun, RefreshCw, Download, X, ArrowLeft, Settings as SettingsIcon, Github, BookOpen } from 'lucide-react';
 import { useConfigStore, useToastStore } from '../../store';
 import { APP_VERSION } from '../../version';
 import { storage } from '../../utils/storage';
@@ -20,6 +20,15 @@ interface ChangelogEntry {
 
 // 硬编码兜底（网页版 fetch 被 CORS 拦截时使用）
 const FALLBACK_CHANGELOG: ChangelogEntry[] = [
+  {
+    version: '1.0.8',
+    items: [
+      '设置页新增「使用说明」弹窗',
+      'APK 版本化命名（app-1.0.8.apk）',
+      '设置页「下载安卓版/电脑版」按钮',
+      '返回按钮保留刷题状态，不再回配置页',
+    ],
+  },
   {
     version: '1.0.7',
     items: [
@@ -129,6 +138,7 @@ export function Settings({ onBack }: SettingsProps) {
   const [errorDetail, setErrorDetail] = useState('');
   const [showUpdatePopup, setShowUpdatePopup] = useState(false);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [autoCheckDone, setAutoCheckDone] = useState(false);
   const [manualCheckDone, setManualCheckDone] = useState(false);
   const [changelog, setChangelog] = useState<ChangelogEntry[]>(FALLBACK_CHANGELOG);
@@ -276,6 +286,14 @@ export function Settings({ onBack }: SettingsProps) {
           返回
         </button>
 
+        <button
+          onClick={() => setShowGuide(true)}
+          className="btn-ghost mb-6 flex items-center gap-2 ml-auto"
+        >
+          <BookOpen className="h-4 w-4" />
+          使用说明
+        </button>
+
         <div className="flex items-center gap-3 mb-8">
           <div className="w-10 h-10 bg-gradient-to-br from-accent-500 to-accent-400 rounded-xl flex items-center justify-center shadow-sm">
             <SettingsIcon className="h-5 w-5 text-white" />
@@ -399,12 +417,97 @@ export function Settings({ onBack }: SettingsProps) {
               <Github className="h-4 w-4" />
               开源项目 · 反馈与建议请联系开发者
             </p>
+            <p className="pt-2 border-t border-surface-200 dark:border-surface-700">
+              {isAndroid ? (
+                <button
+                  onClick={() => openUrl('https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/shuati.exe')}
+                  className="inline-flex items-center gap-2 text-sm text-accent-500 hover:text-accent-600 font-bold transition-colors"
+                >
+                  <Download className="h-4 w-4" />
+                  下载电脑版
+                </button>
+              ) : (
+                <button
+                  onClick={() => openUrl(`https://raw.githubusercontent.com/wazyf-cell/shuati/main/gitee-update/app-${APP_VERSION}.apk`)}
+                  className="inline-flex items-center gap-2 text-sm text-accent-500 hover:text-accent-600 font-bold transition-colors"
+                >
+                  <Download className="h-4 w-4" />
+                  下载安卓版（推荐平板使用）
+                </button>
+              )}
+            </p>
             <p className="text-xs text-surface-400 dark:text-surface-500 mt-3">
               基于 React + Tauri 构建 · 数据存储在本地
             </p>
           </div>
         </div>
       </div>
+
+      {showGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setShowGuide(false)}>
+          <div className="card p-6 w-full max-w-2xl mx-4 max-h-[85vh] overflow-y-auto animate-scale-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-display font-bold text-surface-900 dark:text-surface-100">使用说明</h2>
+              <button onClick={() => setShowGuide(false)} className="p-1 hover:bg-surface-100 dark:hover:bg-surface-700 rounded-lg transition-colors">
+                <X className="h-5 w-5 text-surface-400" />
+              </button>
+            </div>
+
+            <div className="space-y-6 text-sm text-surface-600 dark:text-surface-400 leading-relaxed">
+              <div>
+                <h3 className="text-base font-bold text-surface-800 dark:text-surface-200 mb-2">📚 题库管理</h3>
+                <p>首页「题库广场」可创建、导入、管理题库。支持 TXT 和 Excel 两种导入格式，详细格式见「导入格式规范.md」。题库支持搜索、编辑、删除题目。</p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-surface-800 dark:text-surface-200 mb-2">✏️ 题型支持</h3>
+                <p>支持 5 种题型：单选、多选、判断（用 A/B 选项）、填空、简答。简答支持大题模式（完形填空、阅读理解、七选五、选词填空），含小题拆分和独立的答案判分。</p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-surface-800 dark:text-surface-200 mb-2">🎯 刷题模式</h3>
+                <p>支持单题库刷题、多题库联合刷题、错题重刷、收藏题库刷题。可配置题目数量、随机抽取、排除已刷、计时模式、随机选项顺序、AI 解析等。</p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-surface-800 dark:text-surface-200 mb-2">⌨️ 快捷键</h3>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  {[['← / A', '上一题'], ['→ / D', '下一题'], ['Space', '提交答案'], ['F', '标记/取消'], ['1-9', '选对应选项']].map(([key, desc]) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <kbd className="px-2 py-0.5 bg-surface-100 dark:bg-surface-700 rounded text-xs font-mono">{key}</kbd>
+                      <span className="text-xs">{desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-surface-800 dark:text-surface-200 mb-2">🤖 AI 解析</h3>
+                <p>AI 配置页支持 6 个平台（硅基流动、OpenAI、DeepSeek、Azure、Gemini、Claude）。刷题时可实时 AI 解析，Review 时可查看错题解析。支持 3 种模式 × 3 个可编辑提示词模板。解析结果本地缓存，不重复消耗 Token。</p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-surface-800 dark:text-surface-200 mb-2">📊 错题本与统计</h3>
+                <p>做错的题目自动记录到错题本，支持按题库、题型筛选。统计页面可视化展示正确率、各题型正确率、打卡日历等。收藏功能可标记重点题目，Review 界面也可标记同步。</p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-surface-800 dark:text-surface-200 mb-2">💾 数据与安全</h3>
+                <p>所有数据保存在浏览器本地（localStorage），不上传到任何服务器。桌面版额外支持 Tauri 本地运行。设置页可一键清空所有数据恢复出厂状态。</p>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-surface-800 dark:text-surface-200 mb-2">📱 多端使用</h3>
+                <p>支持 Windows 桌面版（exe/安装包）、Android APK、网页版。数据互不相通，各端独立。设置页「关于」区可下载其他平台版本。</p>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-surface-200 dark:border-surface-700 text-center">
+              <button onClick={() => setShowGuide(false)} className="btn-primary text-sm">我知道了</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         open={showClearAllConfirm}
