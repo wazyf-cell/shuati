@@ -5,7 +5,7 @@ import { PracticeChart } from './PracticeChart';
 import { storage } from '../../utils/storage';
 import { normalizeRecord } from '../../utils/recordCompat';
 import { useBankStore } from '../../store';
-import { BarChart3, ArrowLeft, Trash2 } from 'lucide-react';
+import { BarChart3, ArrowLeft, Trash2, BookOpen } from 'lucide-react';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
 
 interface StatisticsProps {
@@ -15,15 +15,34 @@ interface StatisticsProps {
 export function Statistics({ onBack }: StatisticsProps) {
   const { banks } = useBankStore();
   const [selectedBankId, setSelectedBankId] = useState('all');
+  const [selectedSubject, setSelectedSubject] = useState('all');
   const [refreshKey, setRefreshKey] = useState(0);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const subjectList = useMemo(() => {
+    const subs = new Set<string>();
+    banks.forEach(b => { if (b.subject) subs.add(b.subject); });
+    return Array.from(subs).sort();
+  }, [banks]);
+
+  const banksInSubject = useMemo(() => {
+    if (selectedSubject === 'all') return banks.map(b => b.id);
+    return banks.filter(b => b.subject === selectedSubject).map(b => b.id);
+  }, [banks, selectedSubject]);
 
   const allRecords = useMemo(() => storage.getRecords(), [refreshKey]);
 
   const filteredRecords = useMemo(() => {
-    if (selectedBankId === 'all') return allRecords;
-    return allRecords.filter((r) => normalizeRecord(r).bankIds.includes(selectedBankId));
-  }, [allRecords, selectedBankId]);
+    let result = allRecords;
+    if (selectedBankId !== 'all') {
+      result = result.filter((r) => normalizeRecord(r).bankIds.includes(selectedBankId));
+    } else if (selectedSubject !== 'all') {
+      result = result.filter((r) =>
+        normalizeRecord(r).bankIds.some((bid) => banksInSubject.includes(bid))
+      );
+    }
+    return result;
+  }, [allRecords, selectedBankId, selectedSubject, banksInSubject]);
 
   const totals = useMemo(() => {
     const totalQ = filteredRecords.reduce((sum, r) => sum + r.totalCount, 0);
@@ -58,10 +77,36 @@ export function Statistics({ onBack }: StatisticsProps) {
             className="btn-ghost text-sm text-red-400 hover:text-red-600 flex items-center gap-1"
           >
             <Trash2 className="h-4 w-4" />
-            {selectedBankId === 'all' ? '清空全部统计' : '清空该题库统计'}
+            {selectedSubject !== 'all' ? '清空该学科统计' : selectedBankId === 'all' ? '清空全部统计' : '清空该题库统计'}
           </button>
         )}
       </div>
+
+      {/* 学科过滤 */}
+      {subjectList.length > 0 && (
+        <div className="card p-2 mb-3 flex flex-wrap gap-2">
+          <button
+            onClick={() => { setSelectedSubject('all'); setSelectedBankId('all'); }}
+            className={`px-4 py-2 rounded-xl text-sm font-body font-bold transition-all duration-200 shadow-xs ${
+              selectedSubject === 'all' ? 'btn-primary' : 'btn-ghost'
+            }`}
+          >
+            <BookOpen className="h-4 w-4 inline mr-1" />
+            全部学科
+          </button>
+          {subjectList.map((sub) => (
+            <button
+              key={sub}
+              onClick={() => { setSelectedSubject(sub); setSelectedBankId('all'); }}
+              className={`px-4 py-2 rounded-xl text-sm font-body font-bold transition-all duration-200 shadow-xs ${
+                selectedSubject === sub ? 'btn-primary' : 'btn-ghost'
+              }`}
+            >
+              {sub}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 题库过滤 */}
       <div className="card p-2 mb-6 flex flex-wrap gap-2">
@@ -71,9 +116,9 @@ export function Statistics({ onBack }: StatisticsProps) {
             selectedBankId === 'all' ? 'btn-primary' : 'btn-ghost'
           }`}
         >
-          全部题库
+          {selectedSubject === 'all' ? '全部题库' : `全部${selectedSubject}题库`}
         </button>
-        {banks.map((bank) => (
+        {banks.filter(b => selectedSubject === 'all' || b.subject === selectedSubject).map((bank) => (
           <button
             key={bank.id}
             onClick={() => setSelectedBankId(bank.id)}
@@ -109,9 +154,15 @@ export function Statistics({ onBack }: StatisticsProps) {
 
       <ConfirmDialog
         open={confirmOpen}
-        message={selectedBankId === 'all' ? '确定清空所有练习统计数据吗？题库和错题不受影响。' : '确定清空该题库的练习统计数据吗？其他题库数据不受影响。'}
+        message={selectedSubject !== 'all' ? `确定清空「${selectedSubject}」学科下的所有练习统计数据吗？其他学科数据不受影响。` : selectedBankId === 'all' ? '确定清空所有练习统计数据吗？题库和错题不受影响。' : '确定清空该题库的练习统计数据吗？其他题库数据不受影响。'}
         onConfirm={() => {
-          if (selectedBankId === 'all') {
+          if (selectedSubject !== 'all') {
+            const subjectBankIds = new Set(banks.filter(b => b.subject === selectedSubject).map(b => b.id));
+            const remaining = allRecords.filter(
+              (r) => !normalizeRecord(r).bankIds.some((bid) => subjectBankIds.has(bid))
+            );
+            storage.setRecords(remaining);
+          } else if (selectedBankId === 'all') {
             storage.setRecords([]);
           } else {
             const remaining = allRecords.filter(

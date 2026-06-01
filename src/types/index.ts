@@ -57,6 +57,7 @@ export interface Question {
 export interface QuestionBank {
   id: string;
   name: string;
+  subject?: string;
   questions: Question[];
   createdAt: number;
   updatedAt: number;

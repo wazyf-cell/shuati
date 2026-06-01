@@ -13,7 +13,7 @@ interface BankDetailProps {
 }
 
 export function BankDetail({ bankId, onBack, onStartPractice }: BankDetailProps) {
-  const { banks, deleteQuestion } = useBankStore();
+  const { banks, deleteQuestion, updateBank } = useBankStore();
   const { clearBankWrongs, wrongQuestions } = useWrongStore();
   const { addToast } = useToastStore();
   const [showForm, setShowForm] = useState(false);
@@ -21,6 +21,14 @@ export function BankDetail({ bankId, onBack, onStartPractice }: BankDetailProps)
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<QuestionType | 'all'>('all');
   const [showImportModal, setShowImportModal] = useState(false);
+  const [editingSubject, setEditingSubject] = useState(false);
+  const [subjectInput, setSubjectInput] = useState('');
+
+  const allSubjects = useMemo(() => {
+    const subs = new Set<string>();
+    banks.forEach(b => { if (b.subject) subs.add(b.subject); });
+    return Array.from(subs).sort();
+  }, [banks]);
 
   const bank = banks.find((b) => b.id === bankId);
 
@@ -121,6 +129,41 @@ export function BankDetail({ bankId, onBack, onStartPractice }: BankDetailProps)
           <h1 className="text-2xl font-display font-bold text-surface-500 dark:text-surface-100">
             {bank.name}
           </h1>
+          {editingSubject ? (
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex flex-col gap-1">
+                <select
+                  value={allSubjects.includes(subjectInput) ? subjectInput : ''}
+                  onChange={(e) => setSubjectInput(e.target.value)}
+                  className="input text-sm py-1 px-2 w-40"
+                  autoFocus
+                >
+                  <option value="">不分类</option>
+                  {allSubjects.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <input
+                  value={!allSubjects.includes(subjectInput) ? subjectInput : ''}
+                  onChange={(e) => setSubjectInput(e.target.value)}
+                  placeholder="或输入新分类..."
+                  className="input text-sm py-1 px-2 w-40"
+                />
+              </div>
+              <button onClick={() => { updateBank(bankId, bank.name, subjectInput.trim() || undefined); setEditingSubject(false); }} className="btn-primary text-xs py-1 px-2">保存</button>
+              <button onClick={() => setEditingSubject(false)} className="btn-ghost text-xs py-1 px-2">取消</button>
+            </div>
+          ) : (
+            <p className="section-subtitle mt-1">
+              <span
+                className="cursor-pointer hover:text-accent-500 transition-colors"
+                onClick={() => { setSubjectInput(bank.subject || ''); setEditingSubject(true); }}
+                title="点击编辑学科分类"
+              >
+                {bank.subject || '未设置学科'}
+              </span>
+            </p>
+          )}
           <p className="section-subtitle">
             {bank.questions.length} 道题目
           </p>

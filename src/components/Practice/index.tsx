@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { ArrowLeft, RotateCcw, Trophy, Keyboard, Play, ChevronUp, ChevronDown, ChevronRight, Flag, Lightbulb, Bot, Copy, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { usePracticeStore, useBankStore, useWrongStore, useToastStore, useConfigStore } from '../../store';
 import { hasAnswer, AnswerValue } from '../../store/practice';
@@ -97,6 +97,15 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
   const selectedBanks = resolvedBankIds.map(id => banks.find(b => b.id === id)).filter(Boolean) as typeof banks;
   const isMultiBank = resolvedBankIds.length > 1;
 
+  // 已刷对的题 ID 集合（排除已刷用）
+  const correctIds = useMemo(() => {
+    if (!excludePracticed) return null;
+    const records = storage.getRecords();
+    const set = new Set<string>();
+    records.forEach(r => Object.entries(r.results).forEach(([qId, ok]) => { if (ok) set.add(qId); }));
+    return set;
+  }, [excludePracticed]);
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -154,6 +163,11 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
       startPractice(pickedQuestions, favorites);
       setPhase('practice');
       setSubmitResult(null);
+      if (enableTimer) {
+        setTimerSeconds(timerMode === 'countdown' ? countdownMinutes * 60 : 0);
+      } else {
+        setTimerSeconds(undefined);
+      }
       return;
     }
 
@@ -196,7 +210,7 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
           const bankQuestions = correctIds
             ? bank.questions.filter(q => !correctIds.has(q.id))
             : bank.questions;
-          const count = Math.min(bankCounts[bankId] || 5, bankQuestions.length);
+          const count = Math.min(bankCounts[bankId] ?? 5, bankQuestions.length);
           const selected = isRandom
             ? [...bankQuestions].sort(() => Math.random() - 0.5).slice(0, count)
             : bankQuestions.slice(0, count);
@@ -261,7 +275,7 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
     setPhase('practice');
     setSubmitResult(null);
     if (enableTimer) {
-      setTimerSeconds(timerMode === 'countdown' ? countdownMinutes * 60 : undefined);
+      setTimerSeconds(timerMode === 'countdown' ? countdownMinutes * 60 : 0);
     } else {
       setTimerSeconds(undefined);
     }
@@ -573,19 +587,13 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
               ) : (() => {
                 if (isMultiBank) {
                   if (excludePracticed) {
-                    const recs = storage.getRecords();
-                    const cIds = new Set<string>();
-                    recs.forEach(r => Object.entries(r.results).forEach(([qId, ok]) => { if (ok) cIds.add(qId); }));
-                    const available = selectedBanks.reduce((s, b) => s + b.questions.filter(q => !cIds.has(q.id)).length, 0);
+                    const available = selectedBanks.reduce((s, b) => s + b.questions.filter(q => !correctIds!.has(q.id)).length, 0);
                     return `${selectedBanks.length} 个题库 · 可用 ${available} 道题目（已排除已刷）`;
                   }
                   return `${selectedBanks.length} 个题库 · 共 ${selectedBanks.reduce((sum, b) => sum + b.questions.length, 0)} 道题目`;
                 }
                 if (excludePracticed) {
-                  const recs = storage.getRecords();
-                  const cIds = new Set<string>();
-                  recs.forEach(r => Object.entries(r.results).forEach(([qId, ok]) => { if (ok) cIds.add(qId); }));
-                  const available = bank ? bank.questions.filter(q => !cIds.has(q.id)).length : 0;
+                  const available = bank ? bank.questions.filter(q => !correctIds!.has(q.id)).length : 0;
                   return `可用 ${available} 道题目（已排除已刷）`;
                 }
                 return `共 ${bank?.questions.length || 0} 道题目`;
@@ -596,28 +604,35 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
           {isMultiBank && !usePerType && (
             <div className="space-y-4 mb-6">
               <h3 className="text-sm font-display font-bold text-surface-500 dark:text-surface-300">各题库抽题数量</h3>
-              {selectedBanks.map((bk) => (
-                <div key={bk.id} className="p-4 bg-surface-50 dark:bg-surface-700 rounded-xl">
-                  <div className="flex justify-between mb-2">
-                    <label className="text-sm font-bold text-surface-900 dark:text-surface-100 font-body">
-                      {bk.name}：可用 {bk.questions.length} 题
-                    </label>
-                    <span className="text-sm font-bold text-accent-500 font-body">
-                      {bankCounts[bk.id] || Math.min(5, bk.questions.length)} 题
-                    </span>
+              {selectedBanks.map((bk) => {
+                const filteredCount = correctIds
+                  ? bk.questions.filter(q => !correctIds.has(q.id)).length
+                  : bk.questions.length;
+                const bankMax = Math.max(0, filteredCount);
+                const bankVal = bankCounts[bk.id] ?? Math.min(5, bankMax);
+                return (
+                  <div key={bk.id} className="p-4 bg-surface-50 dark:bg-surface-700 rounded-xl">
+                    <div className="flex justify-between mb-2">
+                      <label className="text-sm font-bold text-surface-900 dark:text-surface-100 font-body">
+                        {bk.name}：可用 {filteredCount} 题
+                      </label>
+                      <span className="text-sm font-bold text-accent-500 font-body">
+                        {bankVal} 题
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max={bankMax || 0}
+                      value={Math.min(bankVal, bankMax)}
+                      onChange={(e) =>
+                        setBankCounts({ ...bankCounts, [bk.id]: parseInt(e.target.value) })
+                      }
+                      className="w-full accent-accent-500"
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min="1"
-                    max={bk.questions.length || 1}
-                    value={bankCounts[bk.id] || Math.min(5, bk.questions.length)}
-                    onChange={(e) =>
-                      setBankCounts({ ...bankCounts, [bk.id]: parseInt(e.target.value) })
-                    }
-                    className="w-full accent-accent-500"
-                  />
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -685,21 +700,29 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
                     <div className="space-y-3">
                       {(isMultiBank ? multiBankTypeOrder : typeOrder).map((type) => {
                         const available = isMultiBank
-                          ? selectedBanks.reduce((sum, bk) => sum + bk.questions.filter((q) => q.type === type).length, 0)
-                          : bank?.questions.filter((q) => q.type === type).length || 0;
+                          ? selectedBanks.reduce((sum, bk) => {
+                              const qs = correctIds
+                                ? bk.questions.filter(q => q.type === type && !correctIds.has(q.id))
+                                : bk.questions.filter(q => q.type === type);
+                              return sum + qs.length;
+                            }, 0)
+                          : (correctIds
+                              ? (bank?.questions.filter(q => q.type === type && !correctIds.has(q.id)).length || 0)
+                              : (bank?.questions.filter(q => q.type === type).length || 0));
+                        const typeMax = Math.max(0, available);
                         return (
                           <div key={type}>
                             <div className="flex justify-between mb-2">
                               <label className="text-sm font-bold text-surface-900 dark:text-surface-100 font-body">
                                 {typeLabels[type]}：可用 {available} 题
                               </label>
-                              <span className="text-sm font-bold text-accent-500 font-body">{typeCounts[type]} 题</span>
+                              <span className="text-sm font-bold text-accent-500 font-body">{Math.min(typeCounts[type], typeMax)} 题</span>
                             </div>
                             <input
                               type="range"
-                              min="1"
-                              max={available || 1}
-                              value={typeCounts[type]}
+                              min="0"
+                              max={typeMax || 1}
+                              value={Math.min(typeCounts[type], typeMax)}
                               onChange={(e) =>
                                 setTypeCounts({ ...typeCounts, [type]: parseInt(e.target.value) })
                               }
@@ -710,6 +733,13 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
                       })}
                     </div>
                   </>
+                ) : isMultiBank ? (
+                  <div className="flex justify-between items-center p-4 bg-surface-50 dark:bg-surface-700 rounded-xl">
+                    <span className="text-sm font-bold text-surface-900 dark:text-surface-100 font-body">合计</span>
+                    <span className="text-lg font-bold text-accent-500">
+                      {Object.values(bankCounts).reduce((s, v) => s + v, 0)} 题
+                    </span>
+                  </div>
                 ) : (
                   <div>
                     <div className="flex justify-between mb-2">
@@ -719,8 +749,14 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
                     <input
                       type="range"
                       min="1"
-                      max={isMultiBank ? selectedBanks.reduce((sum, bk) => sum + bk.questions.length, 0) : (bank?.questions.length || 50)}
-                      value={Math.min(questionCount, isMultiBank ? selectedBanks.reduce((sum, bk) => sum + bk.questions.length, 0) : (bank?.questions.length || 50))}
+                      max={correctIds
+                        ? (bank?.questions.filter(q => !correctIds.has(q.id)).length || 0)
+                        : (bank?.questions.length || 50)
+                      }
+                      value={Math.min(questionCount, correctIds
+                        ? (bank?.questions.filter(q => !correctIds.has(q.id)).length || 0)
+                        : (bank?.questions.length || 50)
+                      )}
                       onChange={(e) => setQuestionCount(parseInt(e.target.value))}
                       className="w-full accent-accent-500"
                     />
@@ -817,7 +853,7 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
                     <input
                       type="range"
                       min="1"
-                      max="120"
+                      max="300"
                       value={countdownMinutes}
                       onChange={(e) => setCountdownMinutes(parseInt(e.target.value))}
                       className="w-full accent-accent-400"
@@ -1101,9 +1137,9 @@ export function Practice({ bankId, bankIds, presetQuestionIds, mode, onBack }: P
           重新设置
         </button>
 
-        {timerSeconds !== undefined && (
+        {enableTimer && (
           <Timer
-            countdownSeconds={timerSeconds}
+            countdownSeconds={timerMode === 'countdown' ? timerSeconds : undefined}
             onTimeUp={() => {
               if (questions.some((q) => !hasAnswer(answers[q.id]) && !viewedAnswerIds.has(q.id))) {
                 addToast('时间到！未作答的题目计为错误', 'warning');

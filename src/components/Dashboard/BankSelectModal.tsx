@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X, CheckSquare, Square } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { X, CheckSquare, Square, BookOpen } from 'lucide-react';
 import { QuestionBank } from '../../types';
 
 interface BankSelectModalProps {
@@ -10,6 +10,25 @@ interface BankSelectModalProps {
 
 export function BankSelectModal({ banks, onConfirm, onClose }: BankSelectModalProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const subjectGroups = useMemo(() => {
+    const groups = new Map<string, QuestionBank[]>();
+    const uncategorized: QuestionBank[] = [];
+    for (const bank of banks) {
+      if (bank.subject) {
+        const list = groups.get(bank.subject) || [];
+        list.push(bank);
+        groups.set(bank.subject, list);
+      } else {
+        uncategorized.push(bank);
+      }
+    }
+    const sorted = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    if (uncategorized.length > 0) {
+      sorted.push(['未分类', uncategorized]);
+    }
+    return sorted;
+  }, [banks]);
 
   const allSelected = selected.size === banks.length;
 
@@ -68,32 +87,43 @@ export function BankSelectModal({ banks, onConfirm, onClose }: BankSelectModalPr
           </span>
         </label>
 
-        <div className="space-y-2 mb-6 max-h-64 overflow-y-auto">
-          {banks.map((bank) => (
-            <label
-              key={bank.id}
-              className="flex items-center gap-3 p-3 bg-surface-50 dark:bg-surface-700 rounded-xl cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-600 transition-colors"
-            >
-              {selected.has(bank.id) ? (
-                <CheckSquare className="h-5 w-5 text-accent-500 flex-shrink-0" />
-              ) : (
-                <Square className="h-5 w-5 text-surface-400 dark:text-surface-400 flex-shrink-0" />
-              )}
-              <input
-                type="checkbox"
-                checked={selected.has(bank.id)}
-                onChange={() => toggleBank(bank.id)}
-                className="hidden"
-              />
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-bold text-surface-900 dark:text-surface-100 block truncate">
-                  {bank.name}
-                </span>
+        <div className="space-y-4 mb-6 max-h-64 overflow-y-auto">
+          {subjectGroups.map(([subject, subjectBanks]) => (
+            <div key={subject}>
+              <h4 className="text-xs font-bold text-surface-400 dark:text-surface-500 mb-2 flex items-center gap-1.5 px-1">
+                <BookOpen className="h-3.5 w-3.5" />
+                {subject}
+                <span className="text-xs font-normal">({subjectBanks.length})</span>
+              </h4>
+              <div className="space-y-2">
+                {subjectBanks.map((bank) => (
+                  <label
+                    key={bank.id}
+                    className="flex items-center gap-3 p-3 bg-surface-50 dark:bg-surface-700 rounded-xl cursor-pointer hover:bg-surface-100 dark:hover:bg-surface-600 transition-colors"
+                  >
+                    {selected.has(bank.id) ? (
+                      <CheckSquare className="h-5 w-5 text-accent-500 flex-shrink-0" />
+                    ) : (
+                      <Square className="h-5 w-5 text-surface-400 dark:text-surface-400 flex-shrink-0" />
+                    )}
+                    <input
+                      type="checkbox"
+                      checked={selected.has(bank.id)}
+                      onChange={() => toggleBank(bank.id)}
+                      className="hidden"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-bold text-surface-900 dark:text-surface-100 block truncate">
+                        {bank.name}
+                      </span>
+                    </div>
+                    <span className="text-xs text-surface-500 dark:text-surface-300 font-body flex-shrink-0">
+                      {bank.questions.length} 题
+                    </span>
+                  </label>
+                ))}
               </div>
-              <span className="text-xs text-surface-500 dark:text-surface-300 font-body flex-shrink-0">
-                {bank.questions.length} 题
-              </span>
-            </label>
+            </div>
           ))}
         </div>
 

@@ -6,9 +6,9 @@ interface BankState {
   banks: QuestionBank[];
   currentBankId: string;
   setCurrentBankId: (id: string) => void;
-  addBank: (name: string) => string;
+  addBank: (name: string, subject?: string) => string;
   deleteBank: (id: string) => void;
-  updateBank: (id: string, name: string) => void;
+  updateBank: (id: string, name: string, subject?: string) => void;
   getCurrentBank: () => QuestionBank | undefined;
   addQuestion: (bankId: string, question: Omit<Question, 'id'>) => void;
   updateQuestion: (bankId: string, questionId: string, question: Partial<Question>) => void;
@@ -26,10 +26,11 @@ export const useBankStore = create<BankState>((set, get) => ({
     storage.setConfig({ ...config, currentBankId: id });
   },
 
-  addBank: (name) => {
+  addBank: (name, subject) => {
     const newBank: QuestionBank = {
       id: Date.now().toString(),
       name,
+      subject,
       questions: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -53,10 +54,10 @@ export const useBankStore = create<BankState>((set, get) => ({
     });
   },
 
-  updateBank: (id, name) => {
+  updateBank: (id, name, subject) => {
     set((state) => {
       const newBanks = state.banks.map((bank) =>
-        bank.id === id ? { ...bank, name, updatedAt: Date.now() } : bank
+        bank.id === id ? { ...bank, name, subject: subject ?? bank.subject, updatedAt: Date.now() } : bank
       );
       storage.setBanks(newBanks);
       return { banks: newBanks };

@@ -11,6 +11,7 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronRight,
+  Layers,
 } from 'lucide-react';
 import { AIExplanationCard } from '../AI/AIExplanationCard';
 import { useWrongStore, useBankStore, useToastStore } from '../../store';
@@ -66,7 +67,7 @@ export function WrongBook({ onBack, onWrongReview }: WrongBookProps) {
   const { addToast } = useToastStore();
 
   // -- View & filter state --
-  const [viewMode, setViewMode] = useState<'time' | 'bank'>('time');
+  const [viewMode, setViewMode] = useState<'time' | 'bank' | 'subject'>('time');
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<QuestionType | 'all'>('all');
 
@@ -76,6 +77,7 @@ export function WrongBook({ onBack, onWrongReview }: WrongBookProps) {
   // -- Collapse state --
   const [collapsedTimeKeys, setCollapsedTimeKeys] = useState<Set<string>>(new Set());
   const [collapsedBankKeys, setCollapsedBankKeys] = useState<Set<string>>(new Set());
+  const [collapsedSubjectKeys, setCollapsedSubjectKeys] = useState<Set<string>>(new Set());
   const [collapsedQuestionIds, setCollapsedQuestionIds] = useState<Set<string>>(() => {
     const s = new Set<string>();
     wrongQuestions.forEach((w) => s.add(w.questionId));
@@ -184,6 +186,42 @@ export function WrongBook({ onBack, onWrongReview }: WrongBookProps) {
     items: WrongQuestion[];
   }
 
+  // ========================
+  // Subject-grouped data
+  // ========================
+  interface SubjectGroup {
+    subject: string;
+    banks: BankGroup[];
+  }
+
+  const subjectGroups = useMemo((): SubjectGroup[] => {
+    const bgMap = new Map<string, BankGroup>();
+    filteredWrong.forEach((w) => {
+      if (!bgMap.has(w.bankId)) {
+        const bank = banks.find((b) => b.id === w.bankId);
+        bgMap.set(w.bankId, { bankId: w.bankId, bankName: bank?.name || '未知题库', items: [] });
+      }
+      bgMap.get(w.bankId)!.items.push(w);
+    });
+
+    const subMap = new Map<string, BankGroup[]>();
+    bgMap.forEach((bg) => {
+      const bank = banks.find((b) => b.id === bg.bankId);
+      const sub = bank?.subject || '未分类';
+      const list = subMap.get(sub) || [];
+      bg.items.sort((a, b) => b.lastWrongAt - a.lastWrongAt);
+      list.push(bg);
+      subMap.set(sub, list);
+    });
+
+    return Array.from(subMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([subject, banks]) => ({
+        subject,
+        banks: banks.sort((a, b) => a.bankName.localeCompare(b.bankName)),
+      }));
+  }, [filteredWrong, banks]);
+
   const bankGroups = useMemo((): BankGroup[] => {
     const map = new Map<string, BankGroup>();
 
@@ -218,6 +256,15 @@ export function WrongBook({ onBack, onWrongReview }: WrongBookProps) {
 
   const toggleBankCollapse = (key: string) => {
     setCollapsedBankKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleSubjectCollapse = (key: string) => {
+    setCollapsedSubjectKeys((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -560,6 +607,73 @@ export function WrongBook({ onBack, onWrongReview }: WrongBookProps) {
   // ========================
   // Render: bank-grouped view
   // ========================
+  const renderSubjectView = () => (
+    <div className="space-y-4">
+      {subjectGroups.map((group) => {
+        const isCollapsed = collapsedSubjectKeys.has(group.subject);
+        const totalItems = group.banks.reduce((s, b) => s + b.items.length, 0);
+
+        return (
+          <div key={group.subject} className="card p-5">
+            <button
+              onClick={() => toggleSubjectCollapse(group.subject)}
+              className="flex items-center gap-2 w-full text-left mb-2"
+            >
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4 text-surface-400 flex-shrink-0" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-surface-400 flex-shrink-0" />
+              )}
+              <BookOpen className="h-4 w-4 text-accent-500 flex-shrink-0" />
+              <span className="font-display font-bold text-surface-700 dark:text-surface-200">
+                {group.subject}
+              </span>
+              <span className="badge-accent badge text-xs">
+                {totalItems} 题
+              </span>
+            </button>
+
+            {!isCollapsed && (
+              <div className="space-y-3 mt-3 pl-6">
+                {group.banks.map((bg) => {
+                  const bankKey = bg.bankId;
+                  const isBankCollapsed = collapsedBankKeys.has(bankKey);
+
+                  return (
+                    <div key={bankKey}>
+                      <button
+                        onClick={() => toggleBankCollapse(bankKey)}
+                        className="flex items-center gap-2 w-full text-left mb-2"
+                      >
+                        {isBankCollapsed ? (
+                          <ChevronRight className="h-3.5 w-3.5 text-surface-400 flex-shrink-0" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5 text-surface-400 flex-shrink-0" />
+                        )}
+                        <span className="text-sm font-semibold text-surface-600 dark:text-surface-300">
+                          {bg.bankName}
+                        </span>
+                        <span className="text-xs text-surface-400">
+                          ({bg.items.length} 题)
+                        </span>
+                      </button>
+
+                      {!isBankCollapsed && (
+                        <div className="space-y-3 pl-5">
+                          {bg.items.map((w, idx) => renderWrongCard(w, idx))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
   const renderBankView = () => (
     <div className="space-y-4">
       {bankGroups.map((group) => {
@@ -659,6 +773,17 @@ export function WrongBook({ onBack, onWrongReview }: WrongBookProps) {
               <BookOpen className="h-4 w-4 inline mr-1" />
               按题库
             </button>
+            <button
+              onClick={() => setViewMode('subject')}
+              className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${
+                viewMode === 'subject'
+                  ? 'bg-accent-500 text-white shadow-sm'
+                  : 'bg-surface-50 dark:bg-surface-700 text-surface-400 dark:text-surface-300'
+              }`}
+            >
+              <Layers className="h-4 w-4 inline mr-1" />
+              按学科
+            </button>
           </div>
         </div>
 
@@ -751,7 +876,7 @@ export function WrongBook({ onBack, onWrongReview }: WrongBookProps) {
           <p className="section-subtitle mt-2">试试调整搜索条件或筛选类型</p>
         </div>
       ) : (
-        viewMode === 'time' ? renderTimeView() : renderBankView()
+        viewMode === 'time' ? renderTimeView() : viewMode === 'bank' ? renderBankView() : renderSubjectView()
       )}
 
       {/* Confirm dialog for clear all */}

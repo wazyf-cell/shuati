@@ -1,11 +1,12 @@
 import { memo } from 'react';
-import { BookOpen, Trash2, PlayCircle, Hash, FileText } from 'lucide-react';
+import { BookOpen, Trash2, PlayCircle, Hash, FileText, Settings2 } from 'lucide-react';
 import { QuestionBank } from '../../types';
 
 interface BankCardProps {
   bank: QuestionBank;
   onDelete: () => void;
   onSelect: () => void;
+  onEdit: () => void;
 }
 
 const gradientMap = [
@@ -16,7 +17,7 @@ const gradientMap = [
   'from-accent-300 to-accent-400',
 ];
 
-export const BankCard = memo(function BankCard({ bank, onDelete, onSelect }: BankCardProps) {
+export const BankCard = memo(function BankCard({ bank, onDelete, onSelect, onEdit }: BankCardProps) {
   const typeCounts = bank.questions.reduce(
     (acc, q) => {
       acc[q.type] = (acc[q.type] || 0) + 1;
@@ -56,14 +57,29 @@ export const BankCard = memo(function BankCard({ bank, onDelete, onSelect }: Ban
               </p>
             </div>
           </div>
-          <button
-            onClick={handleDelete}
-            className="p-2 text-red-400 dark:text-red-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-            title="删除题库"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              className="p-2 text-surface-400 hover:text-accent-500 hover:bg-surface-100 dark:hover:bg-surface-700 rounded-xl transition-colors"
+              title="编辑题库"
+            >
+              <Settings2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleDelete}
+              className="p-2 text-red-400 dark:text-red-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+              title="删除题库"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
+
+        {bank.subject && (
+          <p className="text-xs text-accent-500 dark:text-accent-400 font-bold mb-2">
+            {bank.subject}
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-2 mb-4">
           {typeCounts['single'] > 0 && (

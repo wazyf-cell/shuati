@@ -1,16 +1,62 @@
+# 依赖
 node_modules/
+
+# 构建输出
 dist/
 target/
+src-tauri/target/
+
+# Vercel
 .vercel/
-*.msi
+
+# 编辑器 / AI 配置
+.claude/
+.trae/
+
+# 旧版备份 & 临时文件
+1-7/
+刷题4.0.html
+纯前端网页刷题系统项目规划.zip
+test.txt
+
+# 文档 & 测试（不上传公开仓库）
+docs/
+tests/
+验收测试.js
+部署与更新说明.md
+测试方案.md
+诊断与修复方案.md
+自动更新方案.md
+
+# 工具脚本（本地用，不上传）
+打包安装包.bat
+deploy.bat
+start.bat
+
+# 密钥 & 隐私
 .env
 .DS_Store
 *.local
+*.key
+*.pem
+*.p8
+*.p12
+*.pfx
+credentials*
+*secret*
+token*
+api-key*
+*.log
+
+# 安装包（下载缓存）
+*.msi
+*.air
+*.ipa
+
+# Flash 旧产物（无用）
 bin-debug/
 bin-release/
 [Oo]bj/
 [Bb]in/
 .settings/
 *.swf
-*.air
-*.ipa
