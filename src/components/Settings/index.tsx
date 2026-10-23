@@ -1,143 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Moon, Sun, RefreshCw, Download, X, ArrowLeft, Settings as SettingsIcon, Github, BookOpen } from 'lucide-react';
-import { useConfigStore, useToastStore } from '../../store';
+import {
+  Moon,
+  Sun,
+  RefreshCw,
+  Download,
+  X,
+  ArrowLeft,
+  Settings as SettingsIcon,
+  Github,
+  BookOpen,
+  ExternalLink,
+  FileText,
+} from 'lucide-react';
+import { useConfigStore, useToastStore, useUpdateStore } from '../../store';
+import { isNewerRelease } from '../../store/update';
 import { APP_VERSION } from '../../version';
 import { storage } from '../../utils/storage';
+import { isAndroid, isTauri } from '../../utils/platform';
+import { parseReleaseNotes, pickAsset, RELEASES_PAGE } from '../../utils/githubRelease';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
-const UPDATE_URL = 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/version.json';
-
-interface UpdateInfo {
-  version: string;
-  downloadUrl: string;
-  apkDownloadUrl?: string;
-  notes: string;
-}
-
-interface ChangelogEntry {
-  version: string;
-  items: string[];
-}
-
-// 硬编码兜底（网页版 fetch 被 CORS 拦截时使用）
-const FALLBACK_CHANGELOG: ChangelogEntry[] = [
-  {
-    version: '1.0.9',
-    items: [
-      '题库学科分类系统（新增 subject 字段）',
-      '题库广场按学科分组展示',
-      '新建/编辑题库支持学科分类（下拉选已有 + 手输新分类）',
-      '学科重命名（点击学科名批量更新所有题库）',
-      '题库卡片 hover 编辑按钮（改名称 + 学科）',
-      '题库详情页学科显示/编辑',
-      '错题本新增「按学科」折叠视图',
-      '收藏题库重构（按题库/按学科视图、搜索、题型筛选、多选批量重刷）',
-      '多选题库弹窗按学科分组',
-      '练习统计学科筛选 + 清空学科统计',
-    ],
-  },
-  {
-    version: '1.0.8',
-    items: [
-      '设置页新增「使用说明」弹窗',
-      'APK 版本化命名（app-1.0.8.apk）',
-      '设置页「下载安卓版/电脑版」按钮',
-      '返回按钮保留刷题状态，不再回配置页',
-    ],
-  },
-  {
-    version: '1.0.7',
-    items: [
-      'AI 提示词模板系统（3模式 × 3模板，可编辑名称和内容）',
-      '底部导航栏常驻（已答数、快捷键提示、上/下一题）',
-      '刷题/Review 导航栏滚动条 + 高度适配',
-      'Review 支持 Flag 标记同步收藏',
-      '快捷键增强（A/D、Space、数字键、F 标记）',
-      '清空所有数据（设置页一键恢复出厂状态）',
-      '清空标记拆分（错题标记 / 已刷标记分开清理）',
-      'AI 缓存清空加确认弹窗',
-      '页面缓存 Bug 修复（切换刷题模式不串数据）',
-      '多题库滑块上限修复',
-      '错题本/收藏题库长文本不截断',
-    ],
-  },
-  {
-    version: '1.0.6',
-    items: [
-      '简答大题导入支持多行选项',
-      '完形/阅读/七选五/选词填空导入示例',
-      '刷题题目和选项支持换行显示',
-      '导入格式规范增加 AI 格式提示',
-      'CLAUDE.md 发布流程规范化',
-    ],
-  },
-  {
-    version: '1.0.5',
-    items: [
-      '导航栏新增返回按钮（支持历史回溯）',
-      '刷题状态持久化（切换页面不丢失）',
-      '简答大题编辑左右分栏+可拖拽分割线',
-      '简答题导入多行内容支持',
-      '简答题 AI 解析包含小题',
-      '清理死代码（旧解析器/AIConfigModal）',
-      'localStorage 写入保护',
-      'clearAll 清理 AI 缓存',
-    ],
-  },
-  {
-    version: '1.0.4',
-    items: [
-      '收藏题库刷题标题独立、标记预加载',
-      '刷题查看正确答案自动显示题目解析',
-      'Review 每题显示题目解析',
-      'AI 解析自动保存到题库',
-      'AI 解析缓存标识📋已缓存',
-      '题目编辑解析框自适应高度',
-      '更新日志自动同步 version.json',
-    ],
-  },
-  {
-    version: '1.0.3',
-    items: ['修复版本号不统一问题'],
-  },
-  {
-    version: '1.0.2',
-    items: [
-      '新增收藏题库（Flag 标记自动收藏，按题库分组查看，支持 AI 解析）',
-      '新增自动加入错题本开关（刷题设置中可关闭）',
-      '新增题目编辑 AI 生成解析',
-      '新增题库清空错题标记功能',
-      'AI 配置前往官网自动打开系统浏览器',
-      '收藏题库与错题本 UI 统一',
-      '优化导入弹窗居中显示',
-    ],
-  },
-  {
-    version: '1.0.1',
-    items: [
-      '新增程序内自动更新',
-      '新增 Windows 无感更新',
-      '新增 GitHub 更新源',
-      '优化设置页面',
-      '修复 AI 平台配置编译错误',
-      '修复更新 URL 指向 Vercel',
-      '修复 .gitignore 合并冲突',
-      '优化构建产物目录',
-    ],
-  },
-  {
-    version: '0.1.0',
-    items: [
-      '新增 AI 多平台配置',
-      '新增 AI 解析结果缓存',
-      '新增刷题计时模式',
-      '新增多题库联合刷题',
-      '新增错题本分组浏览与 AI 解析',
-      '新增练习统计',
-      '新增导入/导出数据',
-      '修复多项 Bug',
-    ],
-  },
-];
+import { UpdateDialog } from '../Update/UpdateDialog';
 interface SettingsProps {
   onBack: () => void;
 }
@@ -145,99 +27,16 @@ interface SettingsProps {
 export function Settings({ onBack }: SettingsProps) {
   const { darkMode, toggleDarkMode } = useConfigStore();
   const { addToast } = useToastStore();
-  const [checking, setChecking] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
-  const [checked, setChecked] = useState(false);
-  const [noUpdate, setNoUpdate] = useState(false);
-  const [networkError, setNetworkError] = useState(false);
-  const [errorDetail, setErrorDetail] = useState('');
-  const [showUpdatePopup, setShowUpdatePopup] = useState(false);
+  const { latest, loading, error, fetchLatest } = useUpdateStore();
+  const hasUpdate = isNewerRelease(latest);
+  const notes = latest ? parseReleaseNotes(latest.notes) : [];
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
-  const [autoCheckDone, setAutoCheckDone] = useState(false);
-  const [manualCheckDone, setManualCheckDone] = useState(false);
-  const [changelog, setChangelog] = useState<ChangelogEntry[]>(FALLBACK_CHANGELOG);
 
-  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
-  const isAndroid = typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform?.();
-
-  // 设置页打开后自动检查（失败则显示错误 + 手动下载链接）
   useEffect(() => {
-    if (autoCheckDone || manualCheckDone) return;
-    const check = async () => {
-      try {
-        if (isTauri) {
-          const { invoke } = await import('@tauri-apps/api/core');
-          const text = await invoke<string>('check_update_v2');
-          const data: UpdateInfo = JSON.parse(text);
-          setChecked(true);
-          if (data.version && data.version !== APP_VERSION) {
-            setUpdateInfo(data);
-          } else {
-            setNoUpdate(true);
-          }
-          // Tauri：也不覆盖本地 changelog，远程 notes 仅用于弹窗
-        } else {
-          const res = await fetch(UPDATE_URL, { signal: AbortSignal.timeout(5000) });
-          if (!res.ok) return;
-          const data: UpdateInfo = await res.json();
-          setChecked(true);
-          if (data.version && data.version !== APP_VERSION) {
-            setUpdateInfo(data);
-          } else {
-            setNoUpdate(true);
-          }
-          // 网页版：只查版本，不用远程 notes
-        }
-      } catch (e: any) {
-        setNetworkError(true);
-        setErrorDetail(e instanceof Error ? e.message : String(e || ''));
-        setChangelog(FALLBACK_CHANGELOG);
-      }
-      setAutoCheckDone(true);
-    };
-    check();
-  }, [autoCheckDone, isTauri, manualCheckDone]);
-
-  const handleCheckUpdate = useCallback(async () => {
-    setChecking(true);
-    setChecked(true);
-    setNoUpdate(false);
-    setNetworkError(false);
-    setErrorDetail('');
-    setUpdateInfo(null);
-    setManualCheckDone(true);
-
-    try {
-      let data: UpdateInfo;
-
-      if (isTauri) {
-        const { invoke } = await import('@tauri-apps/api/core');
-        const text = await invoke<string>('check_update_v2');
-        data = JSON.parse(text);
-      } else {
-        const res = await fetch(UPDATE_URL, { signal: AbortSignal.timeout(8000) });
-        if (!res.ok) {
-          setNetworkError(true);
-          setErrorDetail(`服务器返回 HTTP ${res.status}`);
-          setChecking(false);
-          return;
-        }
-        data = await res.json();
-      }
-
-      if (data.version && data.version !== APP_VERSION) {
-        setUpdateInfo(data);
-        setShowUpdatePopup(true);
-      } else {
-        setNoUpdate(true);
-      }
-    } catch (e: any) {
-      setNetworkError(true);
-      setErrorDetail(e instanceof Error ? e.message : String(e || ''));
-    }
-    setChecking(false);
-  }, [isTauri]);
+    fetchLatest();
+  }, [fetchLatest]);
 
   const openUrl = useCallback(async (url: string) => {
     if (isTauri) {
@@ -246,53 +45,36 @@ export function Settings({ onBack }: SettingsProps) {
     } else {
       window.open(url, '_blank');
     }
-  }, [isTauri]);
+  }, []);
 
-  const handleDownload = useCallback(async () => {
-    if (!updateInfo) return;
-    const url = isAndroid && updateInfo.apkDownloadUrl
-      ? updateInfo.apkDownloadUrl
-      : updateInfo.downloadUrl;
-    if (url) {
-      openUrl(url);
+  const handleCheckUpdate = useCallback(async () => {
+    const release = await fetchLatest(true);
+    if (release && isNewerRelease(release)) {
+      setShowUpdateDialog(true);
     }
-    setShowUpdatePopup(false);
-  }, [updateInfo, isTauri, isAndroid, openUrl]);
+  }, [fetchLatest]);
+
+  const crossDownload = useCallback(async () => {
+    if (!latest) {
+      await openUrl(RELEASES_PAGE);
+      return;
+    }
+    const asset = isAndroid
+      ? pickAsset(latest, 'setup') || pickAsset(latest, 'portable')
+      : pickAsset(latest, 'apk');
+    await openUrl(asset?.url || latest.htmlUrl || RELEASES_PAGE);
+  }, [latest, openUrl]);
+
+  const openLogDir = useCallback(async () => {
+    if (!isTauri) return;
+    const { invoke } = await import('@tauri-apps/api/core');
+    await invoke('open_log_dir');
+  }, []);
 
   return (
     <>
-      {/* 更新通知弹窗（手动检查触发） */}
-      {showUpdatePopup && updateInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={() => setShowUpdatePopup(false)}>
-          <div className="card p-6 w-full max-w-lg mx-4 animate-bounce-in" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-accent-500 to-accent-400 rounded-xl flex items-center justify-center shadow-sm">
-                  <Download className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-display font-bold text-surface-900 dark:text-surface-100">发现新版本</h3>
-                  <p className="text-sm text-surface-500 dark:text-surface-400">v{APP_VERSION} → v{updateInfo.version}</p>
-                </div>
-              </div>
-              <button onClick={() => setShowUpdatePopup(false)} className="p-1 hover:bg-surface-100 dark:hover:bg-surface-700 rounded-lg transition-colors">
-                <X className="h-5 w-5 text-surface-400" />
-              </button>
-            </div>
-            <div className="p-4 bg-surface-50 dark:bg-surface-700 rounded-xl mb-4 max-h-48 overflow-y-auto">
-              <p className="text-sm text-surface-700 dark:text-surface-300 whitespace-pre-wrap leading-relaxed">
-                {updateInfo.notes}
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={handleDownload} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                <Download className="h-4 w-4" />
-                {isAndroid ? '下载 APK' : '下载更新'}
-              </button>
-              <button onClick={() => setShowUpdatePopup(false)} className="btn-ghost flex-1">暂不更新</button>
-            </div>
-          </div>
-        </div>
+      {showUpdateDialog && latest && (
+        <UpdateDialog release={latest} onClose={() => setShowUpdateDialog(false)} />
       )}
 
       <div className="animate-scale-in">
@@ -340,72 +122,98 @@ export function Settings({ onBack }: SettingsProps) {
         <div className="card p-6 mb-6">
           <h3 className="text-lg font-display font-bold text-surface-800 dark:text-surface-200 mb-4">更新</h3>
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-sm text-surface-600 dark:text-surface-300 font-body">
-                当前版本：<span className="font-bold text-accent-500">v{APP_VERSION}</span>
-              </p>
-            </div>
+            <p className="text-sm text-surface-600 dark:text-surface-300 font-body">
+              当前版本：<span className="font-bold text-accent-500">v{APP_VERSION}</span>
+            </p>
             <button
               onClick={handleCheckUpdate}
-              disabled={checking}
+              disabled={loading}
               className="btn-ghost flex items-center gap-2 disabled:opacity-50"
             >
-              <RefreshCw className={`h-4 w-4 ${checking ? 'animate-spin' : ''}`} />
-              {checking ? '检查中...' : '检查更新'}
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? '检查中...' : '检查更新'}
             </button>
           </div>
 
-          {networkError && (
+          {error && (
             <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700">
               <p className="text-base font-bold text-red-700 dark:text-red-300 mb-2">
                 ⚠️ 无法检测最新版本
               </p>
-              <p className="text-sm text-red-600 dark:text-red-400">
-                手动下载更新：
-                <button
-                  onClick={() => openUrl(isAndroid ? 'https://raw.githubusercontent.com/wazyf-cell/shuati/main/gitee-update/app-debug.apk' : 'https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/shuati.exe')}
-                  className="ml-1 text-accent-600 dark:text-accent-400 font-bold underline hover:no-underline"
-                >
-                  点击下载 {isAndroid ? 'app-debug.apk' : 'shuati.exe'}
-                </button>
-              </p>
-              {errorDetail && (
-                <p className="text-xs text-red-500 dark:text-red-400 mt-2 break-all font-mono">{errorDetail}</p>
+              <p className="text-sm text-red-600 dark:text-red-400 break-all">{error}</p>
+              <button
+                onClick={() => openUrl(RELEASES_PAGE)}
+                className="mt-2 text-sm text-accent-600 dark:text-accent-400 font-bold underline hover:no-underline"
+              >
+                打开 Releases 手动下载
+              </button>
+            </div>
+          )}
+
+          {!error && latest && !hasUpdate && (
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 text-sm text-emerald-700 dark:text-emerald-300">
+              ✅ 已是最新版本（v{latest.version}）
+            </div>
+          )}
+
+          {!error && latest && hasUpdate && (
+            <div className="p-3 rounded-xl bg-accent-50 dark:bg-accent-900/20 border border-accent-200 dark:border-accent-700 text-sm text-accent-700 dark:text-accent-300">
+              🆕 v{latest.version} 可用！
+              <button
+                onClick={() => setShowUpdateDialog(true)}
+                className="ml-2 underline hover:no-underline"
+              >
+                查看详情
+              </button>
+            </div>
+          )}
+
+          <div className="mt-5">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-bold text-surface-600 dark:text-surface-400">更新日志</h4>
+              {latest?.publishedAt && (
+                <span className="text-xs text-surface-400">
+                  {new Date(latest.publishedAt).toLocaleDateString('zh-CN')}
+                </span>
               )}
             </div>
-          )}
-
-          {checked && noUpdate && (
-            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 text-sm text-emerald-700 dark:text-emerald-300">
-              ✅ 已是最新版本
-            </div>
-          )}
-
-          {checked && updateInfo && !showUpdatePopup && (
-            <div className="p-3 rounded-xl bg-accent-50 dark:bg-accent-900/20 border border-accent-200 dark:border-accent-700 text-sm text-accent-700 dark:text-accent-300">
-              🆕 v{updateInfo.version} 可用！
-              <button onClick={() => setShowUpdatePopup(true)} className="ml-2 underline hover:no-underline">查看详情</button>
-            </div>
-          )}
-
-          {/* 更新日志 */}
-          <div className="mt-4">
-            <h4 className="text-sm font-bold text-surface-600 dark:text-surface-400 mb-3">更新日志</h4>
-            <div className="max-h-64 overflow-y-auto pr-1">
-              {changelog.map((ver) => (
-                <div key={ver.version} className="mb-4 last:mb-0">
-                  <h5 className="text-sm font-bold text-accent-500 mb-2">v{ver.version}</h5>
-                  <div className="space-y-1">
-                    {ver.items.map((item, i) => (
-                      <div key={i} className="flex items-start gap-2 text-sm text-surface-600 dark:text-surface-400">
-                        <span className="text-accent-500 mt-0.5 flex-shrink-0">·</span>
-                        <span>{item}</span>
-                      </div>
-                    ))}
-                  </div>
+            {loading && !latest && (
+              <p className="text-sm text-surface-400">正在获取最新 Release...</p>
+            )}
+            {latest && (
+              <div className="max-h-64 overflow-y-auto pr-1">
+                <h5 className="text-sm font-bold text-accent-500 mb-2">v{latest.version}</h5>
+                <div className="space-y-1">
+                  {notes.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start gap-2 text-sm text-surface-600 dark:text-surface-400"
+                    >
+                      <span className="text-accent-500 mt-0.5 flex-shrink-0">·</span>
+                      <span>{item}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+                <button
+                  onClick={() => openUrl(latest.htmlUrl || RELEASES_PAGE)}
+                  className="mt-3 inline-flex items-center gap-1 text-xs text-accent-500 hover:text-accent-600"
+                >
+                  查看 Release 页面
+                  <ExternalLink className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+            {!loading && !latest && (
+              <div className="text-sm text-surface-400">
+                {error ? '无法获取在线更新日志。' : '暂无更新日志。'}
+                <button
+                  onClick={() => openUrl(RELEASES_PAGE)}
+                  className="ml-1 text-accent-500 underline hover:no-underline"
+                >
+                  打开 Releases
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -430,27 +238,37 @@ export function Settings({ onBack }: SettingsProps) {
             <p>刷题助手 <span className="font-bold text-surface-700 dark:text-surface-300">v{APP_VERSION}</span></p>
             <p className="flex items-center gap-2">
               <Github className="h-4 w-4" />
-              开源项目 · 反馈与建议请联系开发者
+              <button
+                onClick={() => openUrl('https://github.com/wazyf-cell/shuati')}
+                className="hover:text-accent-500 transition-colors"
+              >
+                开源项目 · GitHub
+              </button>
             </p>
-            <p className="pt-2 border-t border-surface-200 dark:border-surface-700">
-              {isAndroid ? (
+            <div className="pt-2 border-t border-surface-200 dark:border-surface-700 flex flex-wrap gap-4">
+              <button
+                onClick={crossDownload}
+                className="inline-flex items-center gap-2 text-sm text-accent-500 hover:text-accent-600 font-bold transition-colors"
+              >
+                <Download className="h-4 w-4" />
+                {isAndroid ? '下载电脑版' : '下载安卓版（推荐平板使用）'}
+              </button>
+              {isTauri && (
                 <button
-                  onClick={() => openUrl('https://gitee.com/zhong-yongfu/shuati/raw/master/gitee-update/shuati.exe')}
-                  className="inline-flex items-center gap-2 text-sm text-accent-500 hover:text-accent-600 font-bold transition-colors"
+                  onClick={openLogDir}
+                  className="inline-flex items-center gap-2 text-sm text-surface-500 hover:text-accent-500 transition-colors"
                 >
-                  <Download className="h-4 w-4" />
-                  下载电脑版
-                </button>
-              ) : (
-                <button
-                  onClick={() => openUrl(`https://raw.githubusercontent.com/wazyf-cell/shuati/main/gitee-update/app-${APP_VERSION}.apk`)}
-                  className="inline-flex items-center gap-2 text-sm text-accent-500 hover:text-accent-600 font-bold transition-colors"
-                >
-                  <Download className="h-4 w-4" />
-                  下载安卓版（推荐平板使用）
+                  <FileText className="h-4 w-4" />
+                  打开日志文件夹
                 </button>
               )}
-            </p>
+            </div>
+            {latest && (
+              <p className="text-xs text-surface-400 dark:text-surface-500">
+                最新版本：v{latest.version}
+                {latest.assets.length > 0 ? ` · ${latest.assets.length} 个下载文件` : ''}
+              </p>
+            )}
             <p className="text-xs text-surface-400 dark:text-surface-500 mt-3">
               基于 React + Tauri 构建 · 数据存储在本地
             </p>

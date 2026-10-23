@@ -3,3 +3,4 @@ export { usePracticeStore } from './practice';
 export { useWrongStore } from './wrong';
 export { useConfigStore } from './config';
 export { useToastStore } from './toast';
+export { useUpdateStore, isNewerRelease } from './update';

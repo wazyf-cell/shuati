@@ -25,16 +25,19 @@
 
 | 平台 | 下载 |
 |------|------|
-| **Windows 便携版** | 下载 `gitee-update/shuati.exe` 直接运行 |
-| **Windows 安装包** | 下载 `gitee-update/shuati_x.x.x_x64-setup.exe` |
-| **Android** | 下载 `gitee-update/app-debug.apk` |
+| **Windows 安装包（推荐）** | [Releases](https://github.com/wazyf-cell/shuati/releases) 下载 `shuati_x.x.x_x64-setup.exe` |
+| **Windows 便携版** | [Releases](https://github.com/wazyf-cell/shuati/releases) 下载 `shuati-portable.zip`（含 `WebView2Loader.dll`） |
+| **Android** | [Releases](https://github.com/wazyf-cell/shuati/releases) 下载 `app-debug.apk` |
+| **校验文件** | 每个 Release 附 `SHA256SUMS.txt` |
 | **网页版** | `npm run dev` 本地运行，浏览器打开 `http://localhost:5173` |
+
+> Windows 首次运行会提示“未知发布者”：点击 **更多信息 → 仍要运行**。程序未做代码签名，但源码完全公开，每个 Release 都附 SHA256 校验文件。
 
 ## 🚀 快速开始
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-username/shuati.git
+git clone https://github.com/wazyf-cell/shuati.git
 cd shuati
 
 # 安装依赖
@@ -49,15 +52,20 @@ npm run tauri:build
 # 构建 Web 并同步 Android
 npm run build
 npx cap sync android
+cd android && ./gradlew assembleDebug
 ```
+
+完整的 Windows / Android 构建前置条件和常见问题见 [BUILD.md](BUILD.md)。
+
+发布新版本时只改 `src/version.ts`，然后运行 `npm run version:sync`，会同步 `package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml` 和 Android 的 `versionName` / `versionCode`。
 
 ## 🧩 技术栈
 
 | 层 | 技术 |
 |---|------|
 | 框架 | React 18 + TypeScript |
-| 桌面端 | Tauri 1.x (Rust) |
-| Android | Capacitor |
+| 桌面端 | Tauri 2.x (Rust) |
+| Android | Capacitor 8.x |
 | 构建 | Vite |
 | 状态管理 | Zustand |
 | 样式 | Tailwind CSS |
@@ -78,7 +86,8 @@ src/
 │   ├── WrongBook/        # 错题本（时间 / 题库 / 学科视图）
 │   ├── FavoriteBank/     # 收藏夹（题库 / 学科视图）
 │   ├── Statistics/       # 练习统计（正确率 · 趋势图 · 学科筛选）
-│   ├── Settings/         # 设置 · 更新日志 · 使用说明
+│   ├── Settings/         # 设置 · 最新 Release 日志 · 使用说明
+│   ├── Update/           # 更新弹窗 · 下载进度 · 安装
 │   ├── AI/               # AI 配置页 · 解析卡片
 │   └── Layout/Header.tsx # 导航栏
 ├── store/                # Zustand 状态管理
@@ -86,10 +95,18 @@ src/
 │   ├── config.ts         # 用户配置 · 收藏夹
 │   ├── practice.ts       # 刷题状态
 │   ├── wrong.ts          # 错题本
-│   └── toast.ts          # 通知
+│   ├── toast.ts          # 通知
+│   └── update.ts         # 最新 GitHub Release
 ├── types/                # TypeScript 类型定义
-├── utils/                # 工具函数（storage / AI / 解析器）
+├── utils/                # 工具函数
+│   ├── githubRelease.ts  # Release API · 资产选择 · SHA256
+│   ├── shuatiUpdater.ts  # Android 原生更新插件
+│   └── ...
 └── hooks/                # 自定义 Hooks
+
+scripts/sync-version.mjs  # 版本号同步
+android/                  # Capacitor Android 工程
+src-tauri/                # Tauri 桌面工程
 ```
 
 ## 📥 导入题目格式
@@ -117,6 +134,16 @@ B. 错误
 答案：A
 ```
 
+## 🔄 更新机制
+
+- 更新源：`https://api.github.com/repos/wazyf-cell/shuati/releases/latest`
+- 更新日志：只显示最新 Release 的正文（`- ` 列表），不再内置历史日志
+- 桌面端：下载便携版 `shuati.exe` → SHA256 校验 → 确认后原地替换并自动重启；当前目录不可写时回退到安装包
+- Android：原生下载 APK → 进度/取消 → SHA256 校验 → 自动打开系统安装器（需允许安装未知应用）
+- 每个 Release 附 `SHA256SUMS.txt`，校验不通过不会执行/安装
+- 跨平台下载按钮直接打开对应 Release 资产
+- 桌面日志：`%LOCALAPPDATA%\com.shuati.app\logs\shuati.log`（设置页可直接打开）
+
 ## 🔒 隐私说明
 
 - 所有数据存储在 **本地**（浏览器 localStorage），不上传任何服务器
@@ -125,4 +152,4 @@ B. 错误
 
 ## 📄 开源协议
 
-MIT License
+[MIT License](LICENSE)

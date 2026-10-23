@@ -53,6 +53,9 @@ api-key*
 *.air
 *.ipa
 
+# 本地整理的 Release 上传目录（不上传 git）
+release-assets/
+
 # Flash 旧产物（无用）
 bin-debug/
 bin-release/

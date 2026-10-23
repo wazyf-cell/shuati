@@ -25,10 +25,13 @@ An offline, lightweight, cross-platform quiz application. Designed for **Chinese
 
 | Platform | Download |
 |----------|----------|
-| **Windows Portable** | Download `shuati.exe` from [Releases](https://github.com/wazyf-cell/shuati/releases) |
-| **Windows Installer** | Download `shuati_x.x.x_x64-setup.exe` from [Releases](https://github.com/wazyf-cell/shuati/releases) |
+| **Windows Installer (recommended)** | Download `shuati_x.x.x_x64-setup.exe` from [Releases](https://github.com/wazyf-cell/shuati/releases) |
+| **Windows Portable** | Download `shuati-portable.zip` from [Releases](https://github.com/wazyf-cell/shuati/releases) |
 | **Android APK** | Download `app-debug.apk` from [Releases](https://github.com/wazyf-cell/shuati/releases) |
+| **Checksums** | Every Release includes `SHA256SUMS.txt` |
 | **Web (dev)** | Run `npm run dev` and open `http://localhost:5173` |
+
+> On first launch Windows may show "Unknown publisher": click **More info → Run anyway**. The binaries are not code-signed, but the source is public and every Release ships SHA256 checksums.
 
 ## 🚀 Quick Start
 
@@ -49,15 +52,20 @@ npm run tauri:build
 # Build web & sync Android
 npm run build
 npx cap sync android
+cd android && ./gradlew assembleDebug
 ```
+
+When releasing, change `src/version.ts` and run `npm run version:sync`; it updates `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, and Android `versionName` / `versionCode`.
+
+See [BUILD.md](BUILD.md) for Windows/Android prerequisites and troubleshooting (written in Chinese).
 
 ## 🧩 Tech Stack
 
 | Layer | Tech |
 |-------|------|
 | Framework | React 18 + TypeScript |
-| Desktop | Tauri 1.x (Rust) |
-| Android | Capacitor |
+| Desktop | Tauri 2.x (Rust) |
+| Android | Capacitor 8.x |
 | Build | Vite |
 | State | Zustand |
 | Styling | Tailwind CSS |
@@ -78,13 +86,18 @@ src/
 │   ├── WrongBook/        # Wrong answer review
 │   ├── FavoriteBank/     # Favorites
 │   ├── Statistics/       # Practice stats & charts
-│   ├── Settings/         # Settings · changelog
+│   ├── Settings/         # Settings · latest Release notes
+│   ├── Update/           # Update dialog · download progress · install
 │   ├── AI/               # AI config · explanation card
 │   └── Layout/Header.tsx # Nav bar
-├── store/                # Zustand stores
+├── store/                # Zustand stores (including latest GitHub Release)
 ├── types/                # TypeScript type definitions
-├── utils/                # Utilities (storage, AI, parsers)
+├── utils/                # Utilities (Release API, updater, storage, AI, parsers)
 └── hooks/                # Custom hooks
+
+scripts/sync-version.mjs  # Version sync
+android/                  # Capacitor Android project
+src-tauri/                # Tauri desktop project
 ```
 
 ## 📥 Import Format
@@ -112,6 +125,15 @@ B. False
 Answer: A
 ```
 
+## 🔄 Updates
+
+- Source: `https://api.github.com/repos/wazyf-cell/shuati/releases/latest`
+- Changelog: only the latest Release body (bullet list)
+- Desktop: download portable `shuati.exe` → SHA256 verify → confirm → replace in place and restart; falls back to the installer if the directory is not writable
+- Android: native APK download with progress/cancel → SHA256 verify → open the system installer (requires allowing unknown apps)
+- Every Release ships `SHA256SUMS.txt`; installs are blocked on checksum mismatch
+- Logs: `%LOCALAPPDATA%\com.shuati.app\logs\shuati.log`
+
 ## 🔒 Privacy
 
 - All data is stored **locally** (browser localStorage), never uploaded to any server
@@ -120,4 +142,4 @@ Answer: A
 
 ## 📄 License
 
-MIT License
+[MIT License](LICENSE)
