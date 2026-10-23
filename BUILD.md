@@ -75,10 +75,10 @@ npm run tauri:build
 
 产物：
 
-- `src-tauri/target/release/shuati.exe`（便携版，需要同目录的 `WebView2Loader.dll`）
-- `src-tauri/target/release/bundle/nsis/shuati_<版本>_x64-setup.exe`（安装包，已包含 DLL）
+- `src-tauri/target/release/shuati.exe`（便携版，单文件即可运行）
+- `src-tauri/target/release/bundle/nsis/shuati_<版本>_x64-setup.exe`（安装包）
 
-> 如果只做便携版分发，请把 `shuati.exe`、`WebView2Loader.dll` 和 `导入格式规范.md` 打成一个 zip，不要单独发裸 exe，否则可能因缺少 DLL 启动失败。
+> 便携版分发时，把 `shuati.exe` 和 `导入格式规范.md` 打成一个 zip 即可。Tauri 2 静态链接 WebView2 加载器，不需要额外的 DLL。
 
 ## 6. 构建 Android APK
 
@@ -148,9 +148,8 @@ sha256sum *.exe *.apk | sed 's/ \*/  /' > SHA256SUMS.txt
 
 先看日志：`%LOCALAPPDATA%\com.shuati.app\logs\shuati.log`。设置页有「打开日志文件夹」按钮。常见原因：
 
-- 便携版缺 `WebView2Loader.dll`
-- 同时开了多个实例（1.0.10 已加单实例限制）
 - 杀软拦截/隔离了 exe
+- 系统缺少 WebView2 运行时（安装包会自动装；便携版请确认系统已安装）
 
 ### Android 安装被拦截
 

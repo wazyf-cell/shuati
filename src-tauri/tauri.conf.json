@@ -27,8 +27,7 @@
     "active": true,
     "targets": "nsis",
     "resources": {
-      "../导入格式规范.md": "./导入格式规范.md",
-      "../src-tauri/target/release/WebView2Loader.dll": "./WebView2Loader.dll"
+      "../导入格式规范.md": "./导入格式规范.md"
     },
     "windows": {
       "nsis": {

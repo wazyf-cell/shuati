@@ -27,7 +27,7 @@
 | 平台 | 下载 |
 |------|------|
 | **Windows 安装包（推荐）** | [Releases](https://github.com/wazyf-cell/shuati/releases) 下载 `shuati_x.x.x_x64-setup.exe` |
-| **Windows 便携版** | [Releases](https://github.com/wazyf-cell/shuati/releases) 下载 `shuati-portable.zip`（含 `WebView2Loader.dll`） |
+| **Windows 便携版** | [Releases](https://github.com/wazyf-cell/shuati/releases) 下载 `shuati-portable.zip`，解压即用 |
 | **Android** | [Releases](https://github.com/wazyf-cell/shuati/releases) 下载 `app-debug.apk` |
 | **校验文件** | 每个 Release 附 `SHA256SUMS.txt` |
 | **网页版** | `npm run dev` 本地运行，浏览器打开 `http://localhost:5173` |
