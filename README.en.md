@@ -19,6 +19,7 @@ An offline, lightweight, cross-platform quiz application. Designed for **Chinese
 | **Statistics** | Accuracy trend chart, daily practice volume, subject-level filtering |
 | **AI Explanation** | Integrates 6 AI platforms for intelligent question analysis |
 | **Import / Export** | Bulk import via TXT / Excel, JSON export for backup |
+| **In-app Update** | Checks the latest GitHub Release, shows download progress, verifies SHA256, then installs (desktop replaces in place, Android opens the system installer) |
 | **Cross-platform** | Windows desktop (Tauri) + Android mobile (Capacitor) |
 
 ## 🖥️ Download
@@ -32,6 +33,8 @@ An offline, lightweight, cross-platform quiz application. Designed for **Chinese
 | **Web (dev)** | Run `npm run dev` and open `http://localhost:5173` |
 
 > On first launch Windows may show "Unknown publisher": click **More info → Run anyway**. The binaries are not code-signed, but the source is public and every Release ships SHA256 checksums.
+>
+> Builds up to 1.0.9 use the old Gitee update source; install 1.0.10 manually once, after that in-app updates work.
 
 ## 🚀 Quick Start
 

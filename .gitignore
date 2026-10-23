@@ -56,6 +56,13 @@ api-key*
 # 本地整理的 Release 上传目录（不上传 git）
 release-assets/
 
+# 开发辅助文件（不上传公开仓库）
+AGENTS.md
+CLAUDE.md
+.qoder-credits/
+images/
+installer/
+
 # Flash 旧产物（无用）
 bin-debug/
 bin-release/

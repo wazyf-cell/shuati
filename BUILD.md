@@ -105,10 +105,10 @@ Android 依赖缓存默认在 `GRADLE_USER_HOME`，本项目建议保持和 Andr
 
 - **1.0.10 仍然使用 debug 签名**，这样已安装的 1.0.8 可以直接覆盖升级。
 - 下一次签名迁移（1.0.11 或之后）使用 release keystore：
-  - keystore 保存在项目外（例如 `F:\Code\Traecncode\Program\keystores\shuati-release.jks`）
-  - `android/key.properties` 指向它（已在 `.gitignore`）
-  - `android/app/build.gradle` 已配置读取 `key.properties`
-- 加密备份在私有仓库 `wazyf-cell/secret` 的 `signing/shuati-signing.7z`；压缩包密码在密码管理器里，不在仓库里。
+  - 把 keystore 放在项目目录之外，例如 `..\keystores\shuati-release.jks`
+  - 在 `android/key.properties` 里写 `storeFile`、`storePassword`、`keyAlias`、`keyPassword`（该文件已被 `.gitignore`）
+  - `android/app/build.gradle` 已配置读取 `key.properties`，文件不存在时自动跳过 release 签名
+- 签名密钥务必备份并加密保存，密码不要写进仓库或源码。
 - 切换签名后，旧 debug 包无法覆盖安装，必须：导出数据 → 卸载 → 安装新包 → 导入数据。
 
 ## 8. 校验文件

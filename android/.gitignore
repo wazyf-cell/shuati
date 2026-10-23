@@ -52,6 +52,9 @@ captures/
 # Comment next line if keeping position of elements in Navigation Editor is relevant for you
 .idea/navEditor.xml
 
+# IDE files
+.idea/
+
 # Keystore files
 *.jks
 *.keystore
